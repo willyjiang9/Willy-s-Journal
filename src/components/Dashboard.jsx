@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { signOut } from 'firebase/auth'
 import {
   collection, addDoc, getDocs, deleteDoc, doc,
-  orderBy, query, serverTimestamp
+  orderBy, query, serverTimestamp, updateDoc, arrayUnion
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { auth, db, storage } from '../firebase'
@@ -15,6 +15,11 @@ function extractSpotifyId(input) {
   if (match) return match[1]
   if (/^[a-zA-Z0-9]{22}$/.test(input.trim())) return input.trim()
   return null
+}
+
+function applyTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+  localStorage.setItem('theme', dark ? 'dark' : 'light')
 }
 
 export default function Dashboard() {
@@ -33,16 +38,23 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [selectedTags, setSelectedTags] = useState([])
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
+  const [replyingTo, setReplyingTo] = useState(null) // post id
+  const [replyText, setReplyText] = useState('')
+  const [replySaving, setReplySaving] = useState(false)
   const fileRef = useRef()
 
   const TAG_OPTIONS = ['life', 'ideas', 'travel', 'work', 'random']
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-    localStorage.setItem('theme', dark ? 'dark' : 'light')
-  }, [dark])
-
+  useEffect(() => { applyTheme(dark) }, [dark])
   useEffect(() => { fetchPosts() }, [])
+
+  function toggleDark() {
+    setDark(prev => {
+      const next = !prev
+      applyTheme(next)
+      return next
+    })
+  }
 
   async function fetchPosts() {
     setLoading(true)
@@ -58,7 +70,6 @@ export default function Dashboard() {
     setSaving(true)
     try {
       let data = { type: postType, createdAt: serverTimestamp() }
-
       if (postType === 'Essay') {
         if (!body.trim()) { setSaving(false); return }
         data = { ...data, title: title || 'Untitled', body, tags: selectedTags }
@@ -73,9 +84,8 @@ export default function Dashboard() {
       } else {
         if (!thought.trim()) { setSaving(false); return }
         const spotifyId = extractSpotifyId(spotifyUrl)
-        data = { ...data, thought, spotifyId }
+        data = { ...data, thought, spotifyId, replies: [] }
       }
-
       const docRef = await addDoc(collection(db, 'posts'), data)
       setPosts(prev => [{ id: docRef.id, ...data, createdAt: { toDate: () => new Date() } }, ...prev])
       resetCompose()
@@ -84,6 +94,31 @@ export default function Dashboard() {
       alert('Failed to save. Check your Firebase config.')
     }
     setSaving(false)
+  }
+
+  async function handleReply(postId) {
+    if (!replyText.trim()) return
+    setReplySaving(true)
+    const reply = {
+      text: replyText.trim(),
+      createdAt: new Date().toISOString()
+    }
+    try {
+      await updateDoc(doc(db, 'posts', postId), {
+        replies: arrayUnion(reply)
+      })
+      setPosts(prev => prev.map(p =>
+        p.id === postId
+          ? { ...p, replies: [...(p.replies || []), reply] }
+          : p
+      ))
+      setReplyText('')
+      setReplyingTo(null)
+    } catch (e) {
+      console.error(e)
+      alert('Failed to save reply.')
+    }
+    setReplySaving(false)
   }
 
   async function handleDelete(id) {
@@ -117,7 +152,24 @@ export default function Dashboard() {
       ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   }
 
+  function formatReplyDate(iso) {
+    const d = new Date(iso)
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+      ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+
   const filtered = posts.filter(p => filter === 'All' || p.type === filter)
+
+  const DotToggle = () => (
+    <button onClick={toggleDark} title="Toggle dark mode" style={{
+      width: 32, height: 32, borderRadius: '50%', border: '1.5px solid var(--ink)',
+      background: dark ? 'var(--ink)' : 'transparent',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0
+    }}>
+      {!dark && <div style={{ width: 10, height: 10, borderRadius: '50%', border: '1.5px solid var(--ink)' }} />}
+    </button>
+  )
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 20px 120px', color: 'var(--ink)' }}>
@@ -134,10 +186,7 @@ export default function Dashboard() {
               }}>{t}</button>
             ))}
           </div>
-          <button onClick={() => setDark(d => !d)} title="Toggle dark mode" style={{
-            background: 'none', border: '1px solid var(--border)', borderRadius: 8,
-            padding: '7px 9px', color: 'var(--muted)', display: 'flex', alignItems: 'center', fontSize: 16
-          }}>{dark ? '☀️' : '🌙'}</button>
+          <DotToggle />
           <button onClick={() => setComposing(true)} style={{
             fontSize: 14, padding: '8px 18px', background: 'var(--ink)', color: 'var(--cream)',
             border: 'none', borderRadius: 20, fontWeight: 500
@@ -235,32 +284,19 @@ export default function Dashboard() {
                 }} />
                 <div style={{ marginTop: 14 }}>
                   <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Spotify track (optional)</p>
-                  <input
-                    value={spotifyUrl}
-                    onChange={e => setSpotifyUrl(e.target.value)}
+                  <input value={spotifyUrl} onChange={e => setSpotifyUrl(e.target.value)}
                     placeholder="Paste Spotify link or track ID..."
-                    style={{
-                      width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8,
-                      fontSize: 13, background: 'var(--surface2)', color: 'var(--ink)', outline: 'none'
-                    }}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, background: 'var(--surface2)', color: 'var(--ink)', outline: 'none' }}
                   />
-                  {spotifyUrl && extractSpotifyId(spotifyUrl) && (
-                    <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 4 }}>✓ Spotify track detected</p>
-                  )}
-                  {spotifyUrl && !extractSpotifyId(spotifyUrl) && (
-                    <p style={{ fontSize: 11, color: '#c0392b', marginTop: 4 }}>Paste the full Spotify share link</p>
-                  )}
+                  {spotifyUrl && extractSpotifyId(spotifyUrl) && <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 4 }}>✓ Spotify track detected</p>}
+                  {spotifyUrl && !extractSpotifyId(spotifyUrl) && <p style={{ fontSize: 11, color: '#c0392b', marginTop: 4 }}>Paste the full Spotify share link</p>}
                 </div>
               </>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-              <button onClick={resetCompose} style={{
-                fontSize: 13, padding: '9px 18px', background: 'none', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--muted)'
-              }}>Cancel</button>
-              <button onClick={handlePublish} disabled={saving} style={{
-                fontSize: 13, padding: '9px 20px', background: 'var(--ink)', color: 'var(--cream)', border: 'none', borderRadius: 20
-              }}>{saving ? 'Saving...' : 'Publish'}</button>
+              <button onClick={resetCompose} style={{ fontSize: 13, padding: '9px 18px', background: 'none', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--muted)' }}>Cancel</button>
+              <button onClick={handlePublish} disabled={saving} style={{ fontSize: 13, padding: '9px 20px', background: 'var(--ink)', color: 'var(--cream)', border: 'none', borderRadius: 20 }}>{saving ? 'Saving...' : 'Publish'}</button>
             </div>
           </div>
         </div>
@@ -268,7 +304,6 @@ export default function Dashboard() {
 
       <main style={{ marginTop: 36 }}>
         {loading && <p style={{ color: 'var(--muted)', fontSize: 14, textAlign: 'center', padding: '60px 0' }}>Loading...</p>}
-
         {!loading && filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--muted)' }}>
             <p style={{ fontSize: 14 }}>Nothing here yet.</p>
@@ -308,13 +343,53 @@ export default function Dashboard() {
                 {post.spotifyId && (
                   <iframe
                     src={`https://open.spotify.com/embed/track/${post.spotifyId}?utm_source=generator&theme=${dark ? 0 : 1}`}
-                    width="100%"
-                    height="80"
-                    frameBorder="0"
+                    width="100%" height="80" frameBorder="0"
                     allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    loading="lazy"
-                    style={{ borderRadius: 10, marginTop: 4 }}
+                    loading="lazy" style={{ borderRadius: 10, marginTop: 4 }}
                   />
+                )}
+
+                {/* Replies */}
+                {post.replies?.length > 0 && (
+                  <div style={{ marginTop: 20, paddingLeft: 16, borderLeft: '2px solid var(--border)' }}>
+                    {post.replies.map((r, i) => (
+                      <div key={i} style={{ marginBottom: 14 }}>
+                        <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, letterSpacing: '0.3px' }}>{formatReplyDate(r.createdAt)}</p>
+                        <p style={{ fontFamily: "'Lora', serif", fontStyle: 'italic', fontSize: 16, lineHeight: 1.6, color: 'var(--thought-text)' }}>"{r.text}"</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Reply input */}
+                {replyingTo === post.id ? (
+                  <div style={{ marginTop: 16, paddingLeft: 16, borderLeft: '2px solid var(--ink)' }}>
+                    <textarea
+                      value={replyText}
+                      onChange={e => setReplyText(e.target.value)}
+                      placeholder="Revisit this thought..."
+                      autoFocus
+                      rows={3}
+                      style={{
+                        width: '100%', border: 'none', outline: 'none', fontFamily: "'Lora', serif",
+                        fontStyle: 'italic', fontSize: 16, lineHeight: 1.7, resize: 'none',
+                        background: 'transparent', color: 'var(--ink)', display: 'block'
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <button onClick={() => { setReplyingTo(null); setReplyText('') }} style={{
+                        fontSize: 12, padding: '6px 14px', background: 'none', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--muted)'
+                      }}>Cancel</button>
+                      <button onClick={() => handleReply(post.id)} disabled={replySaving} style={{
+                        fontSize: 12, padding: '6px 14px', background: 'var(--ink)', color: 'var(--cream)', border: 'none', borderRadius: 20
+                      }}>{replySaving ? '...' : 'Add'}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => { setReplyingTo(post.id); setReplyText('') }} style={{
+                    marginTop: 14, fontSize: 12, color: 'var(--muted)', background: 'none',
+                    border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.2px'
+                  }}>↩ revisit</button>
                 )}
               </>
             )}
