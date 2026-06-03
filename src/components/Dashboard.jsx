@@ -336,8 +336,7 @@ export default function Dashboard() {
 
             {/* Thought */}
             {post.type === 'Thought' && <>
-              <p style={{ fontFamily: "'Lora', serif", fontStyle: 'italic', fontSize: 20, lineHeight: 1.6, color: t.thoughtText, marginBottom: post.spotifyId ? 16 : 0 }}>"{post.thought}"</p>
-              {post.spotifyId && (
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontStyle: 'normal', fontSize: 17, lineHeight: 1.75, color: t.thoughtText, marginBottom: post.spotifyId ? 16 : 0 }}>"{post.thought}"</p>              {post.spotifyId && (
                 <iframe src={`https://open.spotify.com/embed/track/${post.spotifyId}?utm_source=generator&theme=${dark ? 0 : 1}`}
                   width="100%" height="80" frameBorder="0"
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
@@ -348,8 +347,7 @@ export default function Dashboard() {
                   {post.replies.map((r, i) => (
                     <div key={i} style={{ marginBottom: 14 }}>
                       <p style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>{formatReplyDate(r.createdAt)}</p>
-                      <p style={{ fontFamily: "'Lora', serif", fontStyle: 'italic', fontSize: 16, lineHeight: 1.6, color: t.thoughtText }}>"{r.text}"</p>
-                    </div>
+                      <p style={{ fontFamily: "'DM Sans', sans-serif", fontStyle: 'normal', fontSize: 15, lineHeight: 1.75, color: t.thoughtText }}>"{r.text}"</p>                    </div>
                   ))}
                 </div>
               )}
