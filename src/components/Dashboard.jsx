@@ -287,7 +287,7 @@ export default function Dashboard() {
             </>}
 
             {post.type === 'Photo' && <>
-              {post.imageUrl && <img src={post.imageUrl} alt={post.caption} style={{ width: '100%', maxHeight: 420, objectFit: 'cover', borderRadius: 10, marginBottom: 12, display: 'block' }} />}
+              {post.imageUrl && <img src={post.imageUrl} alt={post.caption} style={{ width: '100%', objectFit: 'contain', borderRadius: 10, marginBottom: 12, display: 'block' }} />}
               {post.caption && <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText }}>{post.caption}</p>}
             </>}
 
