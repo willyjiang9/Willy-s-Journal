@@ -17,11 +17,6 @@ function extractSpotifyId(input) {
   return null
 }
 
-function applyTheme(dark) {
-  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-  localStorage.setItem('theme', dark ? 'dark' : 'light')
-}
-
 export default function Dashboard() {
   const [posts, setPosts] = useState([])
   const [filter, setFilter] = useState('All')
@@ -38,23 +33,37 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [selectedTags, setSelectedTags] = useState([])
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
-  const [replyingTo, setReplyingTo] = useState(null) // post id
+  const [replyingTo, setReplyingTo] = useState(null)
   const [replyText, setReplyText] = useState('')
   const [replySaving, setReplySaving] = useState(false)
   const fileRef = useRef()
 
   const TAG_OPTIONS = ['life', 'ideas', 'travel', 'work', 'random']
 
-  useEffect(() => { applyTheme(dark) }, [dark])
+  // All colors driven by JS, not CSS variables
+  const t = {
+    bg:          dark ? '#111110' : '#faf9f7',
+    ink:         dark ? '#f0ede8' : '#1a1a18',
+    muted:       dark ? '#666'    : '#888',
+    border:      dark ? '#2a2a28' : '#e8e6e0',
+    surface:     dark ? '#1c1c1a' : '#ffffff',
+    surface2:    dark ? '#222220' : '#f4f2ef',
+    tagBg:       dark ? '#2a2a28' : '#f0ede8',
+    tagColor:    dark ? '#888'    : '#888',
+    bodyText:    dark ? '#bbb'    : '#444',
+    thoughtText: dark ? '#ccc'    : '#333',
+    accent:      dark ? '#5a9e70' : '#2d5a3d',
+  }
+
+  useEffect(() => {
+    document.body.style.background = t.bg
+    document.body.style.color = t.ink
+    localStorage.setItem('theme', dark ? 'dark' : 'light')
+  }, [dark])
+
   useEffect(() => { fetchPosts() }, [])
 
-  function toggleDark() {
-    setDark(prev => {
-      const next = !prev
-      applyTheme(next)
-      return next
-    })
-  }
+  function toggleDark() { setDark(d => !d) }
 
   async function fetchPosts() {
     setLoading(true)
@@ -99,25 +108,12 @@ export default function Dashboard() {
   async function handleReply(postId) {
     if (!replyText.trim()) return
     setReplySaving(true)
-    const reply = {
-      text: replyText.trim(),
-      createdAt: new Date().toISOString()
-    }
+    const reply = { text: replyText.trim(), createdAt: new Date().toISOString() }
     try {
-      await updateDoc(doc(db, 'posts', postId), {
-        replies: arrayUnion(reply)
-      })
-      setPosts(prev => prev.map(p =>
-        p.id === postId
-          ? { ...p, replies: [...(p.replies || []), reply] }
-          : p
-      ))
-      setReplyText('')
-      setReplyingTo(null)
-    } catch (e) {
-      console.error(e)
-      alert('Failed to save reply.')
-    }
+      await updateDoc(doc(db, 'posts', postId), { replies: arrayUnion(reply) })
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, replies: [...(p.replies || []), reply] } : p))
+      setReplyText(''); setReplyingTo(null)
+    } catch (e) { console.error(e); alert('Failed to save reply.') }
     setReplySaving(false)
   }
 
@@ -142,7 +138,7 @@ export default function Dashboard() {
   }
 
   function toggleTag(tag) {
-    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+    setSelectedTags(prev => prev.includes(tag) ? prev.filter(x => x !== tag) : [...prev, tag])
   }
 
   function formatDate(ts) {
@@ -162,39 +158,49 @@ export default function Dashboard() {
 
   const DotToggle = () => (
     <button onClick={toggleDark} title="Toggle dark mode" style={{
-      width: 32, height: 32, borderRadius: '50%', border: '1.5px solid var(--ink)',
-      background: dark ? 'var(--ink)' : 'transparent',
+      width: 32, height: 32, borderRadius: '50%',
+      border: `1.5px solid ${t.ink}`,
+      background: dark ? t.ink : 'transparent',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0
     }}>
-      {!dark && <div style={{ width: 10, height: 10, borderRadius: '50%', border: '1.5px solid var(--ink)' }} />}
+      {!dark && <div style={{ width: 10, height: 10, borderRadius: '50%', border: `1.5px solid ${t.ink}` }} />}
     </button>
   )
 
-  return (
-    <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 20px 120px', color: 'var(--ink)' }}>
+  const tabBtn = (label) => ({
+    fontSize: 13, padding: '6px 14px',
+    background: filter === label ? t.ink : 'none',
+    border: `1px solid ${t.border}`, borderRadius: 20,
+    color: filter === label ? t.bg : t.muted, letterSpacing: '0.2px'
+  })
 
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 0 20px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: 10 }}>
-        <span style={{ fontFamily: "'Lora', serif", fontSize: 24, letterSpacing: '-0.3px', color: 'var(--ink)' }}>Willy's space</span>
+  const typeBtn = (label) => ({
+    fontSize: 13, padding: '8px 18px',
+    background: postType === label ? t.ink : 'none',
+    border: 'none',
+    color: postType === label ? t.bg : t.muted, letterSpacing: '0.2px'
+  })
+
+  const tagBtn = (tag) => ({
+    fontSize: 12, padding: '5px 13px',
+    border: `1px solid ${t.border}`, borderRadius: 12,
+    background: selectedTags.includes(tag) ? t.ink : 'none',
+    color: selectedTags.includes(tag) ? t.bg : t.muted
+  })
+
+  return (
+    <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 20px 120px', color: t.ink, background: t.bg, minHeight: '100vh' }}>
+
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 0 20px', borderBottom: `1px solid ${t.border}`, flexWrap: 'wrap', gap: 10 }}>
+        <span style={{ fontFamily: "'Lora', serif", fontSize: 24, letterSpacing: '-0.3px', color: t.ink }}>Willy's space</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="header-filters" style={{ display: 'flex', gap: 4 }}>
-            {TABS.map(t => (
-              <button key={t} onClick={() => setFilter(t)} style={{
-                fontSize: 13, padding: '6px 14px', background: filter === t ? 'var(--ink)' : 'none',
-                border: '1px solid var(--border)', borderRadius: 20,
-                color: filter === t ? 'var(--cream)' : 'var(--muted)', letterSpacing: '0.2px'
-              }}>{t}</button>
-            ))}
+            {TABS.map(tab => <button key={tab} onClick={() => setFilter(tab)} style={tabBtn(tab)}>{tab}</button>)}
           </div>
           <DotToggle />
-          <button onClick={() => setComposing(true)} style={{
-            fontSize: 14, padding: '8px 18px', background: 'var(--ink)', color: 'var(--cream)',
-            border: 'none', borderRadius: 20, fontWeight: 500
-          }}>+ New</button>
-          <button onClick={() => signOut(auth)} title="Log out" style={{
-            background: 'none', border: '1px solid var(--border)', borderRadius: 8,
-            padding: '7px 9px', color: 'var(--muted)', display: 'flex', alignItems: 'center'
-          }}>
+          <button onClick={() => setComposing(true)} style={{ fontSize: 14, padding: '8px 18px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20, fontWeight: 500 }}>+ New</button>
+          <button onClick={() => signOut(auth)} title="Log out" style={{ background: 'none', border: `1px solid ${t.border}`, borderRadius: 8, padding: '7px 9px', color: t.muted, display: 'flex', alignItems: 'center' }}>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
@@ -203,212 +209,128 @@ export default function Dashboard() {
       </header>
 
       {composing && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, margin: '24px 0', overflow: 'hidden' }}>
-          <div style={{ padding: '20px 20px' }}>
-            <div style={{ display: 'flex', marginBottom: 18, border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', width: 'fit-content' }}>
-              {['Thought', 'Photo', 'Essay'].map(t => (
-                <button key={t} onClick={() => setPostType(t)} style={{
-                  fontSize: 13, padding: '8px 18px', background: postType === t ? 'var(--ink)' : 'none',
-                  border: 'none', color: postType === t ? 'var(--cream)' : 'var(--muted)', letterSpacing: '0.2px'
-                }}>{t}</button>
-              ))}
+        <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, margin: '24px 0' }}>
+          <div style={{ padding: 20 }}>
+            <div style={{ display: 'flex', marginBottom: 18, border: `1px solid ${t.border}`, borderRadius: 8, overflow: 'hidden', width: 'fit-content' }}>
+              {['Thought', 'Photo', 'Essay'].map(tab => <button key={tab} onClick={() => setPostType(tab)} style={typeBtn(tab)}>{tab}</button>)}
             </div>
 
-            {postType === 'Essay' && (
-              <>
-                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title..." style={{
-                  width: '100%', border: 'none', outline: 'none', fontFamily: "'Lora', serif",
-                  fontSize: 22, fontWeight: 500, color: 'var(--ink)', background: 'transparent', marginBottom: 10, display: 'block'
-                }} />
-                <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Start writing..." rows={8} style={{
-                  width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7,
-                  resize: 'none', background: 'transparent', color: 'var(--ink)', display: 'block', minHeight: 120
-                }} />
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
-                  {TAG_OPTIONS.map(tag => (
-                    <button key={tag} onClick={() => toggleTag(tag)} style={{
-                      fontSize: 12, padding: '5px 13px', border: '1px solid var(--border)', borderRadius: 12,
-                      background: selectedTags.includes(tag) ? 'var(--ink)' : 'none',
-                      color: selectedTags.includes(tag) ? 'var(--cream)' : 'var(--muted)'
-                    }}>{tag}</button>
-                  ))}
-                </div>
-              </>
-            )}
+            {postType === 'Essay' && <>
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title..." style={{ width: '100%', border: 'none', outline: 'none', fontFamily: "'Lora', serif", fontSize: 22, fontWeight: 500, color: t.ink, background: 'transparent', marginBottom: 10, display: 'block' }} />
+              <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Start writing..." rows={8} style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block', minHeight: 120 }} />
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
+                {TAG_OPTIONS.map(tag => <button key={tag} onClick={() => toggleTag(tag)} style={tagBtn(tag)}>{tag}</button>)}
+              </div>
+            </>}
 
-            {postType === 'Photo' && (
-              <>
-                {!imagePreview ? (
-                  <div onClick={() => fileRef.current.click()} style={{
-                    border: '1.5px dashed var(--border)', borderRadius: 10, padding: 40,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', marginBottom: 14, color: 'var(--muted)'
-                  }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8 }}>
-                      <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                    </svg>
-                    <span style={{ fontSize: 13 }}>Tap to upload a photo</span>
-                  </div>
-                ) : (
-                  <div style={{ position: 'relative', marginBottom: 12 }}>
-                    <img src={imagePreview} alt="" style={{ width: '100%', maxHeight: 300, objectFit: 'cover', borderRadius: 10, display: 'block' }} />
-                    <button onClick={() => { setImageFile(null); setImagePreview(null) }} style={{
-                      position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', color: '#fff',
-                      border: 'none', borderRadius: '50%', width: 26, height: 26, fontSize: 11, cursor: 'pointer'
-                    }}>✕</button>
-                  </div>
-                )}
-                <input type="file" accept="image/*" ref={fileRef} style={{ display: 'none' }} onChange={handleImageSelect} />
-                <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Add a caption..." rows={3} style={{
-                  width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7,
-                  resize: 'none', background: 'transparent', color: 'var(--ink)', display: 'block', minHeight: 60
-                }} />
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
-                  {TAG_OPTIONS.map(tag => (
-                    <button key={tag} onClick={() => toggleTag(tag)} style={{
-                      fontSize: 12, padding: '5px 13px', border: '1px solid var(--border)', borderRadius: 12,
-                      background: selectedTags.includes(tag) ? 'var(--ink)' : 'none',
-                      color: selectedTags.includes(tag) ? 'var(--cream)' : 'var(--muted)'
-                    }}>{tag}</button>
-                  ))}
+            {postType === 'Photo' && <>
+              {!imagePreview ? (
+                <div onClick={() => fileRef.current.click()} style={{ border: `1.5px dashed ${t.border}`, borderRadius: 10, padding: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: 14, color: t.muted }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8 }}>
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                  <span style={{ fontSize: 13 }}>Tap to upload a photo</span>
                 </div>
-              </>
-            )}
-
-            {postType === 'Thought' && (
-              <>
-                <textarea value={thought} onChange={e => setThought(e.target.value)} placeholder="What's on your mind..." rows={5} style={{
-                  width: '100%', border: 'none', outline: 'none', fontFamily: "'Lora', serif",
-                  fontStyle: 'italic', fontSize: 18, lineHeight: 1.7, resize: 'none',
-                  background: 'transparent', color: 'var(--ink)', display: 'block'
-                }} />
-                <div style={{ marginTop: 14 }}>
-                  <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Spotify track (optional)</p>
-                  <input value={spotifyUrl} onChange={e => setSpotifyUrl(e.target.value)}
-                    placeholder="Paste Spotify link or track ID..."
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, background: 'var(--surface2)', color: 'var(--ink)', outline: 'none' }}
-                  />
-                  {spotifyUrl && extractSpotifyId(spotifyUrl) && <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 4 }}>✓ Spotify track detected</p>}
-                  {spotifyUrl && !extractSpotifyId(spotifyUrl) && <p style={{ fontSize: 11, color: '#c0392b', marginTop: 4 }}>Paste the full Spotify share link</p>}
+              ) : (
+                <div style={{ position: 'relative', marginBottom: 12 }}>
+                  <img src={imagePreview} alt="" style={{ width: '100%', maxHeight: 300, objectFit: 'cover', borderRadius: 10, display: 'block' }} />
+                  <button onClick={() => { setImageFile(null); setImagePreview(null) }} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 26, height: 26, fontSize: 11, cursor: 'pointer' }}>✕</button>
                 </div>
-              </>
-            )}
+              )}
+              <input type="file" accept="image/*" ref={fileRef} style={{ display: 'none' }} onChange={handleImageSelect} />
+              <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Add a caption..." rows={3} style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block', minHeight: 60 }} />
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
+                {TAG_OPTIONS.map(tag => <button key={tag} onClick={() => toggleTag(tag)} style={tagBtn(tag)}>{tag}</button>)}
+              </div>
+            </>}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-              <button onClick={resetCompose} style={{ fontSize: 13, padding: '9px 18px', background: 'none', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--muted)' }}>Cancel</button>
-              <button onClick={handlePublish} disabled={saving} style={{ fontSize: 13, padding: '9px 20px', background: 'var(--ink)', color: 'var(--cream)', border: 'none', borderRadius: 20 }}>{saving ? 'Saving...' : 'Publish'}</button>
+            {postType === 'Thought' && <>
+              <textarea value={thought} onChange={e => setThought(e.target.value)} placeholder="What's on your mind..." rows={5} style={{ width: '100%', border: 'none', outline: 'none', fontFamily: "'Lora', serif", fontStyle: 'italic', fontSize: 18, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block' }} />
+              <div style={{ marginTop: 14 }}>
+                <p style={{ fontSize: 12, color: t.muted, marginBottom: 6 }}>Spotify track (optional)</p>
+                <input value={spotifyUrl} onChange={e => setSpotifyUrl(e.target.value)} placeholder="Paste Spotify link or track ID..." style={{ width: '100%', padding: '9px 12px', border: `1px solid ${t.border}`, borderRadius: 8, fontSize: 13, background: t.surface2, color: t.ink, outline: 'none' }} />
+                {spotifyUrl && extractSpotifyId(spotifyUrl) && <p style={{ fontSize: 11, color: t.accent, marginTop: 4 }}>✓ Spotify track detected</p>}
+                {spotifyUrl && !extractSpotifyId(spotifyUrl) && <p style={{ fontSize: 11, color: '#c0392b', marginTop: 4 }}>Paste the full Spotify share link</p>}
+              </div>
+            </>}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${t.border}` }}>
+              <button onClick={resetCompose} style={{ fontSize: 13, padding: '9px 18px', background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.muted }}>Cancel</button>
+              <button onClick={handlePublish} disabled={saving} style={{ fontSize: 13, padding: '9px 20px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20 }}>{saving ? 'Saving...' : 'Publish'}</button>
             </div>
           </div>
         </div>
       )}
 
       <main style={{ marginTop: 36 }}>
-        {loading && <p style={{ color: 'var(--muted)', fontSize: 14, textAlign: 'center', padding: '60px 0' }}>Loading...</p>}
+        {loading && <p style={{ color: t.muted, fontSize: 14, textAlign: 'center', padding: '60px 0' }}>Loading...</p>}
         {!loading && filtered.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--muted)' }}>
+          <div style={{ textAlign: 'center', padding: '80px 0', color: t.muted }}>
             <p style={{ fontSize: 14 }}>Nothing here yet.</p>
             <p style={{ fontSize: 13, marginTop: 6 }}>Hit + New to write your first post.</p>
           </div>
         )}
 
         {filtered.map(post => (
-          <div key={post.id} style={{ padding: '28px 0', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)', letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: 10, flexWrap: 'wrap' }}>
+          <div key={post.id} style={{ padding: '28px 0', borderBottom: `1px solid ${t.border}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: t.muted, letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: 10, flexWrap: 'wrap' }}>
               <span>{formatDate(post.createdAt)}</span>
               <span style={{ opacity: 0.4, margin: '0 2px' }}>·</span>
               <span>{post.type}</span>
-              {post.tags?.map(tag => (
-                <span key={tag} style={{ fontSize: 11, background: 'var(--tag-bg)', color: 'var(--tag-color)', padding: '2px 8px', borderRadius: 8, marginLeft: 4 }}>{tag}</span>
-              ))}
-              <button onClick={() => handleDelete(post.id)} style={{ marginLeft: 'auto', fontSize: 11, background: 'none', border: 'none', color: 'var(--border)', cursor: 'pointer', padding: '2px 6px' }}>Delete</button>
+              {post.tags?.map(tag => <span key={tag} style={{ fontSize: 11, background: t.tagBg, color: t.tagColor, padding: '2px 8px', borderRadius: 8, marginLeft: 4 }}>{tag}</span>)}
+              <button onClick={() => handleDelete(post.id)} style={{ marginLeft: 'auto', fontSize: 11, background: 'none', border: 'none', color: t.border, cursor: 'pointer', padding: '2px 6px' }}>Delete</button>
             </div>
 
-            {post.type === 'Essay' && (
-              <>
-                <h2 style={{ fontFamily: "'Lora', serif", fontSize: 22, fontWeight: 500, lineHeight: 1.3, marginBottom: 10, color: 'var(--ink)' }}>{post.title}</h2>
-                <p style={{ fontSize: 15, lineHeight: 1.75, color: 'var(--body-text)', whiteSpace: 'pre-wrap' }}>{post.body}</p>
-              </>
-            )}
+            {post.type === 'Essay' && <>
+              <h2 style={{ fontFamily: "'Lora', serif", fontSize: 22, fontWeight: 500, lineHeight: 1.3, marginBottom: 10, color: t.ink }}>{post.title}</h2>
+              <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText, whiteSpace: 'pre-wrap' }}>{post.body}</p>
+            </>}
 
-            {post.type === 'Photo' && (
-              <>
-                {post.imageUrl && <img src={post.imageUrl} alt={post.caption} style={{ width: '100%', maxHeight: 420, objectFit: 'cover', borderRadius: 10, marginBottom: 12, display: 'block' }} />}
-                {post.caption && <p style={{ fontSize: 15, lineHeight: 1.75, color: 'var(--body-text)' }}>{post.caption}</p>}
-              </>
-            )}
+            {post.type === 'Photo' && <>
+              {post.imageUrl && <img src={post.imageUrl} alt={post.caption} style={{ width: '100%', maxHeight: 420, objectFit: 'cover', borderRadius: 10, marginBottom: 12, display: 'block' }} />}
+              {post.caption && <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText }}>{post.caption}</p>}
+            </>}
 
-            {post.type === 'Thought' && (
-              <>
-                <p style={{ fontFamily: "'Lora', serif", fontStyle: 'italic', fontSize: 20, lineHeight: 1.6, color: 'var(--thought-text)', marginBottom: post.spotifyId ? 16 : 0 }}>"{post.thought}"</p>
-                {post.spotifyId && (
-                  <iframe
-                    src={`https://open.spotify.com/embed/track/${post.spotifyId}?utm_source=generator&theme=${dark ? 0 : 1}`}
-                    width="100%" height="80" frameBorder="0"
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    loading="lazy" style={{ borderRadius: 10, marginTop: 4 }}
-                  />
-                )}
+            {post.type === 'Thought' && <>
+              <p style={{ fontFamily: "'Lora', serif", fontStyle: 'italic', fontSize: 20, lineHeight: 1.6, color: t.thoughtText, marginBottom: post.spotifyId ? 16 : 0 }}>"{post.thought}"</p>
+              {post.spotifyId && (
+                <iframe src={`https://open.spotify.com/embed/track/${post.spotifyId}?utm_source=generator&theme=${dark ? 0 : 1}`}
+                  width="100%" height="80" frameBorder="0"
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="lazy" style={{ borderRadius: 10, marginTop: 4 }} />
+              )}
 
-                {/* Replies */}
-                {post.replies?.length > 0 && (
-                  <div style={{ marginTop: 20, paddingLeft: 16, borderLeft: '2px solid var(--border)' }}>
-                    {post.replies.map((r, i) => (
-                      <div key={i} style={{ marginBottom: 14 }}>
-                        <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, letterSpacing: '0.3px' }}>{formatReplyDate(r.createdAt)}</p>
-                        <p style={{ fontFamily: "'Lora', serif", fontStyle: 'italic', fontSize: 16, lineHeight: 1.6, color: 'var(--thought-text)' }}>"{r.text}"</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Reply input */}
-                {replyingTo === post.id ? (
-                  <div style={{ marginTop: 16, paddingLeft: 16, borderLeft: '2px solid var(--ink)' }}>
-                    <textarea
-                      value={replyText}
-                      onChange={e => setReplyText(e.target.value)}
-                      placeholder="Revisit this thought..."
-                      autoFocus
-                      rows={3}
-                      style={{
-                        width: '100%', border: 'none', outline: 'none', fontFamily: "'Lora', serif",
-                        fontStyle: 'italic', fontSize: 16, lineHeight: 1.7, resize: 'none',
-                        background: 'transparent', color: 'var(--ink)', display: 'block'
-                      }}
-                    />
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <button onClick={() => { setReplyingTo(null); setReplyText('') }} style={{
-                        fontSize: 12, padding: '6px 14px', background: 'none', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--muted)'
-                      }}>Cancel</button>
-                      <button onClick={() => handleReply(post.id)} disabled={replySaving} style={{
-                        fontSize: 12, padding: '6px 14px', background: 'var(--ink)', color: 'var(--cream)', border: 'none', borderRadius: 20
-                      }}>{replySaving ? '...' : 'Add'}</button>
+              {post.replies?.length > 0 && (
+                <div style={{ marginTop: 20, paddingLeft: 16, borderLeft: `2px solid ${t.border}` }}>
+                  {post.replies.map((r, i) => (
+                    <div key={i} style={{ marginBottom: 14 }}>
+                      <p style={{ fontSize: 11, color: t.muted, marginBottom: 4, letterSpacing: '0.3px' }}>{formatReplyDate(r.createdAt)}</p>
+                      <p style={{ fontFamily: "'Lora', serif", fontStyle: 'italic', fontSize: 16, lineHeight: 1.6, color: t.thoughtText }}>"{r.text}"</p>
                     </div>
+                  ))}
+                </div>
+              )}
+
+              {replyingTo === post.id ? (
+                <div style={{ marginTop: 16, paddingLeft: 16, borderLeft: `2px solid ${t.ink}` }}>
+                  <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Revisit this thought..." autoFocus rows={3}
+                    style={{ width: '100%', border: 'none', outline: 'none', fontFamily: "'Lora', serif", fontStyle: 'italic', fontSize: 16, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block' }} />
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                    <button onClick={() => { setReplyingTo(null); setReplyText('') }} style={{ fontSize: 12, padding: '6px 14px', background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.muted }}>Cancel</button>
+                    <button onClick={() => handleReply(post.id)} disabled={replySaving} style={{ fontSize: 12, padding: '6px 14px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20 }}>{replySaving ? '...' : 'Add'}</button>
                   </div>
-                ) : (
-                  <button onClick={() => { setReplyingTo(post.id); setReplyText('') }} style={{
-                    marginTop: 14, fontSize: 12, color: 'var(--muted)', background: 'none',
-                    border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.2px'
-                  }}>↩ revisit</button>
-                )}
-              </>
-            )}
+                </div>
+              ) : (
+                <button onClick={() => { setReplyingTo(post.id); setReplyText('') }} style={{ marginTop: 14, fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.2px' }}>↩ revisit</button>
+              )}
+            </>}
           </div>
         ))}
       </main>
 
-      <div className="mobile-bottom-bar" style={{
-        display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0,
-        background: 'var(--surface)', borderTop: '1px solid var(--border)',
-        padding: '10px 16px 24px', gap: 6, zIndex: 100, justifyContent: 'center', flexWrap: 'wrap'
-      }}>
-        {TABS.map(t => (
-          <button key={t} onClick={() => setFilter(t)} style={{
-            fontSize: 13, padding: '7px 16px',
-            background: filter === t ? 'var(--ink)' : 'var(--surface2)',
-            border: '1px solid var(--border)', borderRadius: 20,
-            color: filter === t ? 'var(--cream)' : 'var(--muted)'
-          }}>{t}</button>
+      <div className="mobile-bottom-bar" style={{ display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0, background: t.surface, borderTop: `1px solid ${t.border}`, padding: '10px 16px 24px', gap: 6, zIndex: 100, justifyContent: 'center', flexWrap: 'wrap' }}>
+        {TABS.map(tab => (
+          <button key={tab} onClick={() => setFilter(tab)} style={{ fontSize: 13, padding: '7px 16px', background: filter === tab ? t.ink : t.surface2, border: `1px solid ${t.border}`, borderRadius: 20, color: filter === tab ? t.bg : t.muted }}>{tab}</button>
         ))}
       </div>
     </div>
