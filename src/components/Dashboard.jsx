@@ -58,8 +58,6 @@ export default function Dashboard() {
     border:      dark ? '#2a2a28' : '#e8e6e0',
     surface:     dark ? '#1c1c1a' : '#ffffff',
     surface2:    dark ? '#222220' : '#f4f2ef',
-    tagBg:       dark ? '#2a2a28' : '#f0ede8',
-    tagColor:    dark ? '#888'    : '#888',
     bodyText:    dark ? '#bbb'    : '#444',
     thoughtText: dark ? '#ccc'    : '#333',
     accent:      dark ? '#5a9e70' : '#2d5a3d',
@@ -96,7 +94,6 @@ export default function Dashboard() {
     setSaving(true)
     try {
       let data = { type: postType, createdAt: serverTimestamp() }
-
       if (postType === 'Photo') {
         let imageUrl = null
         if (imageFile) {
@@ -116,29 +113,20 @@ export default function Dashboard() {
         const filteredTodos = todos.filter(t => t.trim())
         if (!filteredTodos.length) { setSaving(false); return }
         const existing = posts.find(p => p.type === 'Day' && p.dayKey === todayKey())
-        if (existing) {
-          alert("You've already created today's day entry.")
-          setSaving(false); return
-        }
+        if (existing) { alert("You've already created today's day entry."); setSaving(false); return }
         data = { ...data, dayKey: todayKey(), todos: filteredTodos.map(text => ({ text, done: false })), actuallyDid: '' }
       }
-
       const docRef = await addDoc(collection(db, 'posts'), data)
       setPosts(prev => [{ id: docRef.id, ...data, createdAt: { toDate: () => new Date() } }, ...prev])
       resetCompose()
-    } catch (e) {
-      console.error(e)
-      alert('Failed to save.')
-    }
+    } catch (e) { console.error(e); alert('Failed to save.') }
     setSaving(false)
   }
 
   async function toggleTodo(postId, index) {
     const post = posts.find(p => p.id === postId)
     if (!post) return
-    const updatedTodos = post.todos.map((todo, i) =>
-      i === index ? { ...todo, done: !todo.done } : todo
-    )
+    const updatedTodos = post.todos.map((todo, i) => i === index ? { ...todo, done: !todo.done } : todo)
     await updateDoc(doc(db, 'posts', postId), { todos: updatedTodos })
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, todos: updatedTodos } : p))
   }
@@ -239,18 +227,6 @@ export default function Dashboard() {
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 20px 120px', color: t.ink, background: t.bg, minHeight: '100vh' }}>
 
-      {/* Blur overlay */}
-      {blurred && (
-        <div onClick={() => setBlurred(false)} style={{
-          position: 'fixed', inset: 0, zIndex: 999,
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          background: dark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.4)',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <p style={{ fontSize: 13, color: t.muted, letterSpacing: '0.05em' }}>tap to reveal</p>
-        </div>
-      )}
-
       {/* Header */}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 0 20px', borderBottom: `1px solid ${t.border}`, flexWrap: 'wrap', gap: 10 }}>
         <span style={{ fontFamily: "'Lora', serif", fontSize: 24, letterSpacing: '-0.3px', color: t.ink }}>Willy's space</span>
@@ -258,15 +234,19 @@ export default function Dashboard() {
           <div className="header-filters" style={{ display: 'flex', gap: 4 }}>
             {TABS.map(tab => <button key={tab} onClick={() => setFilter(tab)} style={tabBtn(tab)}>{tab}</button>)}
           </div>
-          {/* Blur button */}
-          <button onClick={() => setBlurred(b => !b)} title="Blur content" style={{
-            width: 32, height: 32, borderRadius: 8, border: `1px solid ${t.border}`,
-            background: 'none', color: t.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          {/* Blur toggle */}
+          <button onClick={() => setBlurred(b => !b)} title="Privacy mode" style={{
+            width: 32, height: 32, borderRadius: 8,
+            border: `1px solid ${blurred ? t.ink : t.border}`,
+            background: blurred ? t.ink : 'none',
+            color: blurred ? t.bg : t.muted,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
           }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-              <line x1="1" y1="1" x2="23" y2="23"/>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              {blurred
+                ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+              }
             </svg>
           </button>
           <DotToggle />
@@ -290,7 +270,8 @@ export default function Dashboard() {
             </div>
 
             {postType === 'Thought' && <>
-              <textarea value={thought} onChange={e => setThought(e.target.value)} placeholder="What's on your mind..." rows={5} style={{ width: '100%', border: 'none', outline: 'none', fontSize: 16, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block' }} />
+              <textarea value={thought} onChange={e => setThought(e.target.value)} placeholder="What's on your mind..." rows={5}
+                style={{ width: '100%', border: 'none', outline: 'none', fontSize: 16, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block' }} />
               <div style={{ marginTop: 14 }}>
                 <p style={{ fontSize: 12, color: t.muted, marginBottom: 6 }}>Spotify track (optional)</p>
                 <input value={spotifyUrl} onChange={e => setSpotifyUrl(e.target.value)} placeholder="Paste Spotify link or track ID..."
@@ -315,12 +296,14 @@ export default function Dashboard() {
                 </div>
               )}
               <input type="file" accept="image/*" ref={fileRef} style={{ display: 'none' }} onChange={handleImageSelect} />
-              <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Add a caption..." rows={3} style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block', minHeight: 60 }} />
+              <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Add a caption..." rows={3}
+                style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block', minHeight: 60 }} />
             </>}
 
             {postType === 'Grateful' && <>
               <p style={{ fontSize: 13, color: t.muted, marginBottom: 10 }}>What are you grateful for today?</p>
-              <textarea value={grateful} onChange={e => setGrateful(e.target.value)} placeholder="I'm grateful for..." rows={5} style={{ width: '100%', border: 'none', outline: 'none', fontSize: 16, lineHeight: 1.75, resize: 'none', background: 'transparent', color: t.ink, display: 'block' }} />
+              <textarea value={grateful} onChange={e => setGrateful(e.target.value)} placeholder="I'm grateful for..." rows={5}
+                style={{ width: '100%', border: 'none', outline: 'none', fontSize: 16, lineHeight: 1.75, resize: 'none', background: 'transparent', color: t.ink, display: 'block' }} />
             </>}
 
             {postType === 'Day' && <>
@@ -356,6 +339,8 @@ export default function Dashboard() {
 
         {filtered.map(post => (
           <div key={post.id} style={{ padding: '28px 0', borderBottom: `1px solid ${t.border}` }}>
+
+            {/* Meta — never blurred */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: t.muted, letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: 10, flexWrap: 'wrap' }}>
               <span>{formatDate(post.createdAt)}</span>
               <span style={{ opacity: 0.4, margin: '0 2px' }}>·</span>
@@ -363,103 +348,99 @@ export default function Dashboard() {
               <button onClick={() => handleDelete(post.id)} style={{ marginLeft: 'auto', fontSize: 11, background: 'none', border: 'none', color: t.border, cursor: 'pointer', padding: '2px 6px' }}>Delete</button>
             </div>
 
-            {/* Thought */}
-            {post.type === 'Thought' && <>
-              <p style={{ fontSize: 17, lineHeight: 1.75, color: t.thoughtText, marginBottom: post.spotifyId ? 16 : 0 }}>"{post.thought}"</p>
-              {post.spotifyId && (
-                <iframe src={`https://open.spotify.com/embed/track/${post.spotifyId}?utm_source=generator&theme=${dark ? 0 : 1}`}
-                  width="100%" height="80" frameBorder="0"
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy" style={{ borderRadius: 10, marginTop: 4 }} />
+            {/* Content — blurred in privacy mode */}
+            <div style={{ filter: blurred ? 'blur(12px)' : 'none', userSelect: blurred ? 'none' : 'auto', transition: 'filter 0.2s', pointerEvents: blurred ? 'none' : 'auto' }}>
+
+              {post.type === 'Thought' && <>
+                <p style={{ fontSize: 17, lineHeight: 1.75, color: t.thoughtText, marginBottom: post.spotifyId ? 16 : 0 }}>"{post.thought}"</p>
+                {post.spotifyId && (
+                  <iframe src={`https://open.spotify.com/embed/track/${post.spotifyId}?utm_source=generator&theme=${dark ? 0 : 1}`}
+                    width="100%" height="80" frameBorder="0"
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    loading="lazy" style={{ borderRadius: 10, marginTop: 4 }} />
+                )}
+                {post.replies?.length > 0 && (
+                  <div style={{ marginTop: 20, paddingLeft: 16, borderLeft: `2px solid ${t.border}` }}>
+                    {post.replies.map((r, i) => (
+                      <div key={i} style={{ marginBottom: 14 }}>
+                        <p style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>{formatReplyDate(r.createdAt)}</p>
+                        <p style={{ fontSize: 15, lineHeight: 1.75, color: t.thoughtText }}>"{r.text}"</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {replyingTo === post.id ? (
+                  <div style={{ marginTop: 16, paddingLeft: 16, borderLeft: `2px solid ${t.ink}` }}>
+                    <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Revisit this thought..." autoFocus rows={3}
+                      style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block' }} />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <button onClick={() => { setReplyingTo(null); setReplyText('') }} style={{ fontSize: 12, padding: '6px 14px', background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.muted }}>Cancel</button>
+                      <button onClick={() => handleReply(post.id)} disabled={replySaving} style={{ fontSize: 12, padding: '6px 14px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20 }}>{replySaving ? '...' : 'Add'}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => { setReplyingTo(post.id); setReplyText('') }} style={{ marginTop: 14, fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>↩ revisit</button>
+                )}
+              </>}
+
+              {post.type === 'Photo' && <>
+                {post.imageUrl && <img src={post.imageUrl} alt={post.caption} style={{ width: '100%', objectFit: 'contain', borderRadius: 10, marginBottom: 12, display: 'block' }} />}
+                {post.caption && <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText }}>{post.caption}</p>}
+              </>}
+
+              {post.type === 'Grateful' && (
+                <p style={{ fontSize: 16, lineHeight: 1.8, color: t.bodyText, whiteSpace: 'pre-wrap' }}>{post.grateful}</p>
               )}
-              {post.replies?.length > 0 && (
-                <div style={{ marginTop: 20, paddingLeft: 16, borderLeft: `2px solid ${t.border}` }}>
-                  {post.replies.map((r, i) => (
-                    <div key={i} style={{ marginBottom: 14 }}>
-                      <p style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>{formatReplyDate(r.createdAt)}</p>
-                      <p style={{ fontSize: 15, lineHeight: 1.75, color: t.thoughtText }}>"{r.text}"</p>
+
+              {post.type === 'Day' && <>
+                <p style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: t.ink, marginBottom: 16 }}>{formatDayLabel(post.dayKey)}</p>
+                <div style={{ marginBottom: 20 }}>
+                  <p style={{ fontSize: 11, color: t.muted, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 10 }}>To-do</p>
+                  {post.todos?.map((todo, i) => (
+                    <div key={i} onClick={() => toggleTodo(post.id, i)} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, cursor: 'pointer' }}>
+                      <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: `1.5px solid ${todo.done ? t.green : t.border}`, background: todo.done ? t.green : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {todo.done && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 6 5 9 10 3"/></svg>}
+                      </div>
+                      <span style={{ fontSize: 15, color: todo.done ? t.muted : t.ink, textDecoration: todo.done ? 'line-through' : 'none', lineHeight: 1.5 }}>{todo.text}</span>
                     </div>
                   ))}
-                </div>
-              )}
-              {replyingTo === post.id ? (
-                <div style={{ marginTop: 16, paddingLeft: 16, borderLeft: `2px solid ${t.ink}` }}>
-                  <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Revisit this thought..." autoFocus rows={3}
-                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block' }} />
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    <button onClick={() => { setReplyingTo(null); setReplyText('') }} style={{ fontSize: 12, padding: '6px 14px', background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.muted }}>Cancel</button>
-                    <button onClick={() => handleReply(post.id)} disabled={replySaving} style={{ fontSize: 12, padding: '6px 14px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20 }}>{replySaving ? '...' : 'Add'}</button>
-                  </div>
-                </div>
-              ) : (
-                <button onClick={() => { setReplyingTo(post.id); setReplyText('') }} style={{ marginTop: 14, fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>↩ revisit</button>
-              )}
-            </>}
-
-            {/* Photo */}
-            {post.type === 'Photo' && <>
-              {post.imageUrl && <img src={post.imageUrl} alt={post.caption} style={{ width: '100%', objectFit: 'contain', borderRadius: 10, marginBottom: 12, display: 'block' }} />}
-              {post.caption && <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText }}>{post.caption}</p>}
-            </>}
-
-            {/* Grateful */}
-            {post.type === 'Grateful' && (
-              <p style={{ fontSize: 16, lineHeight: 1.8, color: t.bodyText, whiteSpace: 'pre-wrap' }}>{post.grateful}</p>
-            )}
-
-            {/* Day */}
-            {post.type === 'Day' && <>
-              <p style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: t.ink, marginBottom: 16 }}>{formatDayLabel(post.dayKey)}</p>
-
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ fontSize: 11, color: t.muted, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 10 }}>To-do</p>
-                {post.todos?.map((todo, i) => (
-                  <div key={i} onClick={() => toggleTodo(post.id, i)} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, cursor: 'pointer' }}>
-                    <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: `1.5px solid ${todo.done ? t.green : t.border}`, background: todo.done ? t.green : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {todo.done && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 6 5 9 10 3"/></svg>}
+                  {addingTodoTo === post.id ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                      <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${t.border}`, flexShrink: 0 }} />
+                      <input value={newTodoText} onChange={e => setNewTodoText(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addTodoToPost(post.id)}
+                        placeholder="New task..." autoFocus
+                        style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, background: 'transparent', color: t.ink, borderBottom: `1px solid ${t.border}`, paddingBottom: 4 }} />
+                      <button onClick={() => addTodoToPost(post.id)} style={{ fontSize: 12, padding: '4px 12px', background: t.ink, color: t.bg, border: 'none', borderRadius: 12 }}>Add</button>
+                      <button onClick={() => { setAddingTodoTo(null); setNewTodoText('') }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
                     </div>
-                    <span style={{ fontSize: 15, color: todo.done ? t.muted : t.ink, textDecoration: todo.done ? 'line-through' : 'none', lineHeight: 1.5 }}>{todo.text}</span>
-                  </div>
-                ))}
+                  ) : (
+                    <button onClick={() => setAddingTodoTo(post.id)} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 6 }}>+ add task</button>
+                  )}
+                </div>
+                <div style={{ paddingTop: 16, borderTop: `1px solid ${t.border}` }}>
+                  <p style={{ fontSize: 11, color: t.muted, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 10 }}>What I actually did</p>
+                  {editingDay === post.id ? (
+                    <>
+                      <textarea value={actuallyDid} onChange={e => setActuallyDid(e.target.value)} placeholder="What did you actually end up doing..." autoFocus rows={4}
+                        style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block', borderBottom: `1px solid ${t.border}` }} />
+                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                        <button onClick={() => { setEditingDay(null); setActuallyDid('') }} style={{ fontSize: 12, padding: '6px 14px', background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.muted }}>Cancel</button>
+                        <button onClick={() => saveActuallyDid(post.id)} style={{ fontSize: 12, padding: '6px 14px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20 }}>Save</button>
+                      </div>
+                    </>
+                  ) : post.actuallyDid ? (
+                    <>
+                      <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{post.actuallyDid}</p>
+                      <button onClick={() => { setEditingDay(post.id); setActuallyDid(post.actuallyDid) }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✏ edit</button>
+                    </>
+                  ) : (
+                    <button onClick={() => { setEditingDay(post.id); setActuallyDid('') }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>↩ revisit — what did you actually do?</button>
+                  )}
+                </div>
+              </>}
 
-                {/* Add todo to existing post */}
-                {addingTodoTo === post.id ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                    <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${t.border}`, flexShrink: 0 }} />
-                    <input value={newTodoText} onChange={e => setNewTodoText(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && addTodoToPost(post.id)}
-                      placeholder="New task..." autoFocus
-                      style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, background: 'transparent', color: t.ink, borderBottom: `1px solid ${t.border}`, paddingBottom: 4 }} />
-                    <button onClick={() => addTodoToPost(post.id)} style={{ fontSize: 12, padding: '4px 12px', background: t.ink, color: t.bg, border: 'none', borderRadius: 12 }}>Add</button>
-                    <button onClick={() => { setAddingTodoTo(null); setNewTodoText('') }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
-                  </div>
-                ) : (
-                  <button onClick={() => setAddingTodoTo(post.id)} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 6 }}>+ add task</button>
-                )}
-              </div>
-
-              {/* Actually did */}
-              <div style={{ paddingTop: 16, borderTop: `1px solid ${t.border}` }}>
-                <p style={{ fontSize: 11, color: t.muted, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 10 }}>What I actually did</p>
-                {editingDay === post.id ? (
-                  <>
-                    <textarea value={actuallyDid} onChange={e => setActuallyDid(e.target.value)} placeholder="What did you actually end up doing..." autoFocus rows={4}
-                      style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block', borderBottom: `1px solid ${t.border}` }} />
-                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                      <button onClick={() => { setEditingDay(null); setActuallyDid('') }} style={{ fontSize: 12, padding: '6px 14px', background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.muted }}>Cancel</button>
-                      <button onClick={() => saveActuallyDid(post.id)} style={{ fontSize: 12, padding: '6px 14px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20 }}>Save</button>
-                    </div>
-                  </>
-                ) : post.actuallyDid ? (
-                  <>
-                    <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{post.actuallyDid}</p>
-                    <button onClick={() => { setEditingDay(post.id); setActuallyDid(post.actuallyDid) }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✏ edit</button>
-                  </>
-                ) : (
-                  <button onClick={() => { setEditingDay(post.id); setActuallyDid('') }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>↩ revisit — what did you actually do?</button>
-                )}
-              </div>
-            </>}
+            </div>{/* end blur wrapper */}
           </div>
         ))}
       </main>
