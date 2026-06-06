@@ -7,14 +7,95 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { auth, db, storage } from '../firebase'
 
-const TABS = ['All', 'Thought', 'Photo', 'Grateful', 'Day']
+const TABS = ['All', 'Thought', 'Photo', 'Grateful', 'Day', 'Prompt']
 
-function extractSpotifyId(input) {
-  if (!input) return null
-  const match = input.match(/track\/([a-zA-Z0-9]+)/)
-  if (match) return match[1]
-  if (/^[a-zA-Z0-9]{22}$/.test(input.trim())) return input.trim()
-  return null
+const PROMPTS = [
+  "What is something you believe that most people around you don't?",
+  "If your life had a title right now, what would it be?",
+  "What's a version of yourself you've abandoned? Do you miss them?",
+  "What would you do differently if no one would ever find out?",
+  "What fear has quietly been running your life?",
+  "What's something you've never said out loud but need to?",
+  "Who in your life challenges you the most, and what does that reveal about you?",
+  "What does your ideal day look like, and how far is it from today?",
+  "What have you outgrown but haven't let go of yet?",
+  "What's a decision you made that changed everything?",
+  "What do you want people to say about you at your funeral?",
+  "Where in your life are you settling?",
+  "What's the most honest thing you could say about yourself right now?",
+  "What would you regret not doing in the next 5 years?",
+  "What's a belief you inherited that you've never questioned?",
+  "When do you feel most like yourself?",
+  "What are you currently pretending not to know?",
+  "What does success actually mean to you — not what you've been told?",
+  "What's a pattern in your relationships you keep repeating?",
+  "What would you attempt if failure wasn't possible?",
+  "What part of your past do you still carry that no longer serves you?",
+  "Who are you when no one is watching?",
+  "What emotion do you avoid the most, and why?",
+  "What's something you're proud of that you never talk about?",
+  "What would you tell your 16-year-old self?",
+  "What story do you tell yourself that might not be true?",
+  "What are you waiting for permission to do?",
+  "What does your gut tell you that your brain keeps overriding?",
+  "What have you sacrificed for others that you secretly resent?",
+  "If money wasn't a factor, what would your life look like?",
+  "What chapter of your life are you currently in?",
+  "What's the difference between who you are and who you want to be?",
+  "What makes you feel most alive?",
+  "What's a conversation you've been avoiding?",
+  "What are you most curious about right now?",
+  "What do you need more of in your life? Less of?",
+  "What would it mean to truly forgive yourself?",
+  "What's something you've changed your mind about recently?",
+  "What kind of person do you want to be in a relationship?",
+  "What are you most afraid people will find out about you?",
+  "What does your body tell you that you often ignore?",
+  "If you could restart one thing in your life, what would it be?",
+  "What's a dream you've quietly given up on?",
+  "What boundaries do you need to set but haven't?",
+  "What does home mean to you?",
+  "What's the bravest thing you've ever done?",
+  "What are you grateful for that you never acknowledge?",
+  "What would you do today if it were your last normal day?",
+  "What's a compliment you've received that you never believed?",
+  "What parts of yourself do you hide from the world?",
+  "What's one thing you know you need to change but keep delaying?",
+  "What does your relationship with money say about you?",
+  "When did you last feel truly free?",
+  "What's a value you hold that you've compromised recently?",
+  "What do you envy in others, and what does that reveal about your desires?",
+  "What's something you've done that you're still not sure was right?",
+  "Who has shaped you the most, and how do you feel about that?",
+  "What's the hardest lesson you've learned?",
+  "What would a braver version of you do right now?",
+  "What's something you love about yourself that took a long time to accept?",
+  "What are you building, and does it feel meaningful?",
+  "What does your inner critic sound like, and whose voice is it?",
+  "What's a moment that changed how you see the world?",
+  "What would you do if you weren't afraid of disappointing people?",
+  "What's a version of your future that excites and terrifies you?",
+  "What do you need to hear right now that no one is saying?",
+  "What's something you've been carrying alone that you don't have to?",
+  "What makes you feel most misunderstood?",
+  "What's a habit that's quietly hurting you?",
+  "What would you do if you knew you only had one year left?",
+  "What does it feel like to be you on a hard day?",
+  "What's something that used to scare you that no longer does?",
+  "What's a question you're afraid to answer honestly?",
+  "What brings you peace that you don't make enough time for?",
+  "What's a risk worth taking that you've been putting off?",
+  "What do you want your life to stand for?",
+  "What's a moment where you surprised yourself?",
+  "What are you teaching others by how you live?",
+  "What would your life look like if you fully trusted yourself?",
+]
+
+function getDailyPrompt(offset = 0) {
+  const start = new Date('2026-01-01')
+  const now = new Date()
+  const days = Math.floor((now - start) / (1000 * 60 * 60 * 24)) + offset
+  return PROMPTS[((days % PROMPTS.length) + PROMPTS.length) % PROMPTS.length]
 }
 
 function todayKey() {
@@ -26,9 +107,40 @@ function formatDayLabel(key) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 }
 
+function getPostDate(post) {
+  if (!post.createdAt) return new Date()
+  return post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt)
+}
+
+function getDayKey(date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function getMonthKey(date) {
+  return date.toISOString().slice(0, 7)
+}
+
+function formatMonthLabel(key) {
+  const [year, month] = key.split('-')
+  return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
+function formatDayGroupLabel(key) {
+  const d = new Date(key + 'T12:00:00')
+  const today = todayKey()
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yKey = yesterday.toISOString().slice(0, 10)
+  if (key === today) return 'Today'
+  if (key === yKey) return 'Yesterday'
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+}
+
 export default function Dashboard() {
   const [posts, setPosts] = useState([])
   const [filter, setFilter] = useState('All')
+  const [groupBy, setGroupBy] = useState('none') // 'none' | 'day' | 'month'
+  const [collapsedGroups, setCollapsedGroups] = useState({})
   const [composing, setComposing] = useState(false)
   const [postType, setPostType] = useState('Thought')
   const [imageFile, setImageFile] = useState(null)
@@ -38,6 +150,8 @@ export default function Dashboard() {
   const [spotifyUrl, setSpotifyUrl] = useState('')
   const [grateful, setGrateful] = useState('')
   const [todos, setTodos] = useState(['', '', ''])
+  const [promptAnswer, setPromptAnswer] = useState('')
+  const [promptOffset, setPromptOffset] = useState(0)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -75,9 +189,13 @@ export default function Dashboard() {
   function toggleDark() { setDark(d => !d) }
 
   function handleNewPost() {
-    const typeMap = { Thought: 'Thought', Photo: 'Photo', Grateful: 'Grateful', Day: 'Day' }
+    const typeMap = { Thought: 'Thought', Photo: 'Photo', Grateful: 'Grateful', Day: 'Day', Prompt: 'Prompt' }
     setPostType(typeMap[filter] || 'Thought')
     setComposing(true)
+  }
+
+  function toggleGroup(key) {
+    setCollapsedGroups(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
   async function fetchPosts() {
@@ -115,6 +233,9 @@ export default function Dashboard() {
         const existing = posts.find(p => p.type === 'Day' && p.dayKey === todayKey())
         if (existing) { alert("You've already created today's day entry."); setSaving(false); return }
         data = { ...data, dayKey: todayKey(), todos: filteredTodos.map(text => ({ text, done: false })), actuallyDid: '' }
+      } else if (postType === 'Prompt') {
+        if (!promptAnswer.trim()) { setSaving(false); return }
+        data = { ...data, prompt: getDailyPrompt(promptOffset), answer: promptAnswer }
       }
       const docRef = await addDoc(collection(db, 'posts'), data)
       setPosts(prev => [{ id: docRef.id, ...data, createdAt: { toDate: () => new Date() } }, ...prev])
@@ -138,16 +259,14 @@ export default function Dashboard() {
     const updatedTodos = [...post.todos, { text: newTodoText.trim(), done: false }]
     await updateDoc(doc(db, 'posts', postId), { todos: updatedTodos })
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, todos: updatedTodos } : p))
-    setNewTodoText('')
-    setAddingTodoTo(null)
+    setNewTodoText(''); setAddingTodoTo(null)
   }
 
   async function saveActuallyDid(postId) {
     const trimmed = actuallyDid.trim()
     await updateDoc(doc(db, 'posts', postId), { actuallyDid: trimmed })
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, actuallyDid: trimmed } : p))
-    setEditingDay(null)
-    setActuallyDid('')
+    setEditingDay(null); setActuallyDid('')
   }
 
   async function handleReply(postId) {
@@ -170,8 +289,8 @@ export default function Dashboard() {
 
   function resetCompose() {
     setComposing(false)
-    setCaption(''); setThought(''); setSpotifyUrl(''); setGrateful('')
-    setTodos(['', '', ''])
+    setCaption(''); setThought(''); setSpotifyUrl(''); setGrateful(''); setPromptAnswer('')
+    setTodos(['', '', '']); setPromptOffset(0)
     setImageFile(null); setImagePreview(null)
     setPostType('Thought')
   }
@@ -197,6 +316,29 @@ export default function Dashboard() {
   }
 
   const filtered = posts.filter(p => filter === 'All' || p.type === filter)
+
+  // Group posts
+  function getGroupedPosts() {
+    if (groupBy === 'none') return null
+    const groups = {}
+    filtered.forEach(post => {
+      const date = getPostDate(post)
+      const key = groupBy === 'day' ? getDayKey(date) : getMonthKey(date)
+      if (!groups[key]) groups[key] = []
+      groups[key].push(post)
+    })
+    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]))
+  }
+
+  const grouped = getGroupedPosts()
+
+  function extractSpotifyId(input) {
+    if (!input) return null
+    const match = input.match(/track\/([a-zA-Z0-9]+)/)
+    if (match) return match[1]
+    if (/^[a-zA-Z0-9]{22}$/.test(input.trim())) return input.trim()
+    return null
+  }
 
   const DotToggle = () => (
     <button onClick={toggleDark} title="Toggle dark mode" style={{
@@ -224,6 +366,119 @@ export default function Dashboard() {
     color: postType === label ? t.bg : t.muted, letterSpacing: '0.2px'
   })
 
+  function renderPost(post) {
+    return (
+      <div key={post.id} style={{ padding: '28px 0', borderBottom: `1px solid ${t.border}` }}>
+        {/* Meta */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: t.muted, letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: 10, flexWrap: 'wrap' }}>
+          <span>{formatDate(post.createdAt)}</span>
+          <span style={{ opacity: 0.4, margin: '0 2px' }}>·</span>
+          <span>{post.type}</span>
+          <button onClick={() => handleDelete(post.id)} style={{ marginLeft: 'auto', fontSize: 11, background: 'none', border: 'none', color: t.border, cursor: 'pointer', padding: '2px 6px' }}>Delete</button>
+        </div>
+
+        {/* Content */}
+        <div style={{ filter: blurred ? 'blur(12px)' : 'none', userSelect: blurred ? 'none' : 'auto', transition: 'filter 0.2s', pointerEvents: blurred ? 'none' : 'auto' }}>
+
+          {post.type === 'Thought' && <>
+            <p style={{ fontSize: 17, lineHeight: 1.75, color: t.thoughtText, marginBottom: post.spotifyId ? 16 : 0 }}>"{post.thought}"</p>
+            {post.spotifyId && (
+              <iframe src={`https://open.spotify.com/embed/track/${post.spotifyId}?utm_source=generator&theme=${dark ? 0 : 1}`}
+                width="100%" height="80" frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy" style={{ borderRadius: 10, marginTop: 4 }} />
+            )}
+            {post.replies?.length > 0 && (
+              <div style={{ marginTop: 20, paddingLeft: 16, borderLeft: `2px solid ${t.border}` }}>
+                {post.replies.map((r, i) => (
+                  <div key={i} style={{ marginBottom: 14 }}>
+                    <p style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>{formatReplyDate(r.createdAt)}</p>
+                    <p style={{ fontSize: 15, lineHeight: 1.75, color: t.thoughtText }}>"{r.text}"</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {replyingTo === post.id ? (
+              <div style={{ marginTop: 16, paddingLeft: 16, borderLeft: `2px solid ${t.ink}` }}>
+                <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Revisit this thought..." autoFocus rows={3}
+                  style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block' }} />
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button onClick={() => { setReplyingTo(null); setReplyText('') }} style={{ fontSize: 12, padding: '6px 14px', background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.muted }}>Cancel</button>
+                  <button onClick={() => handleReply(post.id)} disabled={replySaving} style={{ fontSize: 12, padding: '6px 14px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20 }}>{replySaving ? '...' : 'Add'}</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => { setReplyingTo(post.id); setReplyText('') }} style={{ marginTop: 14, fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>↩ revisit</button>
+            )}
+          </>}
+
+          {post.type === 'Photo' && <>
+            {post.imageUrl && <img src={post.imageUrl} alt={post.caption} style={{ width: '100%', objectFit: 'contain', borderRadius: 10, marginBottom: 12, display: 'block' }} />}
+            {post.caption && <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText }}>{post.caption}</p>}
+          </>}
+
+          {post.type === 'Grateful' && (
+            <p style={{ fontSize: 16, lineHeight: 1.8, color: t.bodyText, whiteSpace: 'pre-wrap' }}>{post.grateful}</p>
+          )}
+
+          {post.type === 'Prompt' && <>
+            <p style={{ fontSize: 13, color: t.accent, fontStyle: 'italic', marginBottom: 10, lineHeight: 1.5 }}>"{post.prompt}"</p>
+            <p style={{ fontSize: 16, lineHeight: 1.8, color: t.bodyText, whiteSpace: 'pre-wrap' }}>{post.answer}</p>
+          </>}
+
+          {post.type === 'Day' && <>
+            <p style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: t.ink, marginBottom: 16 }}>{formatDayLabel(post.dayKey)}</p>
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 11, color: t.muted, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 10 }}>To-do</p>
+              {post.todos?.map((todo, i) => (
+                <div key={i} onClick={() => toggleTodo(post.id, i)} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, cursor: 'pointer' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: `1.5px solid ${todo.done ? t.green : t.border}`, background: todo.done ? t.green : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {todo.done && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 6 5 9 10 3"/></svg>}
+                  </div>
+                  <span style={{ fontSize: 15, color: todo.done ? t.muted : t.ink, textDecoration: todo.done ? 'line-through' : 'none', lineHeight: 1.5 }}>{todo.text}</span>
+                </div>
+              ))}
+              {addingTodoTo === post.id ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${t.border}`, flexShrink: 0 }} />
+                  <input value={newTodoText} onChange={e => setNewTodoText(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addTodoToPost(post.id)}
+                    placeholder="New task..." autoFocus
+                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, background: 'transparent', color: t.ink, borderBottom: `1px solid ${t.border}`, paddingBottom: 4 }} />
+                  <button onClick={() => addTodoToPost(post.id)} style={{ fontSize: 12, padding: '4px 12px', background: t.ink, color: t.bg, border: 'none', borderRadius: 12 }}>Add</button>
+                  <button onClick={() => { setAddingTodoTo(null); setNewTodoText('') }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+                </div>
+              ) : (
+                <button onClick={() => setAddingTodoTo(post.id)} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 6 }}>+ add task</button>
+              )}
+            </div>
+            <div style={{ paddingTop: 16, borderTop: `1px solid ${t.border}` }}>
+              <p style={{ fontSize: 11, color: t.muted, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 10 }}>What I actually did</p>
+              {editingDay === post.id ? (
+                <>
+                  <textarea value={actuallyDid} onChange={e => setActuallyDid(e.target.value)} placeholder="What did you actually end up doing..." autoFocus rows={4}
+                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block', borderBottom: `1px solid ${t.border}` }} />
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <button onClick={() => { setEditingDay(null); setActuallyDid('') }} style={{ fontSize: 12, padding: '6px 14px', background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.muted }}>Cancel</button>
+                    <button onClick={() => saveActuallyDid(post.id)} style={{ fontSize: 12, padding: '6px 14px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20 }}>Save</button>
+                  </div>
+                </>
+              ) : post.actuallyDid ? (
+                <>
+                  <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{post.actuallyDid}</p>
+                  <button onClick={() => { setEditingDay(post.id); setActuallyDid(post.actuallyDid) }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✏ edit</button>
+                </>
+              ) : (
+                <button onClick={() => { setEditingDay(post.id); setActuallyDid('') }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>↩ revisit — what did you actually do?</button>
+              )}
+            </div>
+          </>}
+
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 20px 120px', color: t.ink, background: t.bg, minHeight: '100vh' }}>
 
@@ -233,6 +488,15 @@ export default function Dashboard() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="header-filters" style={{ display: 'flex', gap: 4 }}>
             {TABS.map(tab => <button key={tab} onClick={() => setFilter(tab)} style={tabBtn(tab)}>{tab}</button>)}
+          </div>
+          {/* Group by */}
+          <div style={{ display: 'flex', border: `1px solid ${t.border}`, borderRadius: 8, overflow: 'hidden' }}>
+            {[['none', '—'], ['day', 'D'], ['month', 'M']].map(([val, label]) => (
+              <button key={val} onClick={() => setGroupBy(val)} title={val === 'none' ? 'No grouping' : `Group by ${val}`} style={{
+                fontSize: 12, padding: '6px 10px', background: groupBy === val ? t.ink : 'none',
+                border: 'none', color: groupBy === val ? t.bg : t.muted, cursor: 'pointer'
+              }}>{label}</button>
+            ))}
           </div>
           {/* Blur toggle */}
           <button onClick={() => setBlurred(b => !b)} title="Privacy mode" style={{
@@ -264,7 +528,7 @@ export default function Dashboard() {
         <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, margin: '24px 0' }}>
           <div style={{ padding: 20 }}>
             <div style={{ display: 'flex', marginBottom: 18, border: `1px solid ${t.border}`, borderRadius: 8, overflow: 'hidden', width: 'fit-content' }}>
-              {['Thought', 'Photo', 'Grateful', 'Day'].map(tab => (
+              {['Thought', 'Photo', 'Grateful', 'Day', 'Prompt'].map(tab => (
                 <button key={tab} onClick={() => setPostType(tab)} style={typeBtn(tab)}>{tab}</button>
               ))}
             </div>
@@ -319,6 +583,15 @@ export default function Dashboard() {
               <button onClick={() => setTodos([...todos, ''])} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 4 }}>+ add task</button>
             </>}
 
+            {postType === 'Prompt' && <>
+              <div style={{ background: t.surface2, borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+                <p style={{ fontSize: 14, color: t.accent, fontStyle: 'italic', lineHeight: 1.6, marginBottom: 10 }}>"{getDailyPrompt(promptOffset)}"</p>
+                <button onClick={() => setPromptOffset(o => o + 1)} style={{ fontSize: 11, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>↻ different prompt</button>
+              </div>
+              <textarea value={promptAnswer} onChange={e => setPromptAnswer(e.target.value)} placeholder="Write your answer..." rows={7}
+                style={{ width: '100%', border: 'none', outline: 'none', fontSize: 16, lineHeight: 1.75, resize: 'none', background: 'transparent', color: t.ink, display: 'block' }} />
+            </>}
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${t.border}` }}>
               <button onClick={resetCompose} style={{ fontSize: 13, padding: '9px 18px', background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.muted }}>Cancel</button>
               <button onClick={handlePublish} disabled={saving} style={{ fontSize: 13, padding: '9px 20px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20 }}>{saving ? 'Saving...' : 'Publish'}</button>
@@ -337,112 +610,27 @@ export default function Dashboard() {
           </div>
         )}
 
-        {filtered.map(post => (
-          <div key={post.id} style={{ padding: '28px 0', borderBottom: `1px solid ${t.border}` }}>
-
-            {/* Meta — never blurred */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: t.muted, letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: 10, flexWrap: 'wrap' }}>
-              <span>{formatDate(post.createdAt)}</span>
-              <span style={{ opacity: 0.4, margin: '0 2px' }}>·</span>
-              <span>{post.type}</span>
-              <button onClick={() => handleDelete(post.id)} style={{ marginLeft: 'auto', fontSize: 11, background: 'none', border: 'none', color: t.border, cursor: 'pointer', padding: '2px 6px' }}>Delete</button>
+        {grouped ? (
+          grouped.map(([groupKey, groupPosts]) => (
+            <div key={groupKey} style={{ marginBottom: 8 }}>
+              <button onClick={() => toggleGroup(groupKey)} style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '14px 0', background: 'none', border: 'none', cursor: 'pointer',
+                borderBottom: `1px solid ${t.border}`
+              }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: t.ink, letterSpacing: '0.2px' }}>
+                  {groupBy === 'day' ? formatDayGroupLabel(groupKey) : formatMonthLabel(groupKey)}
+                </span>
+                <span style={{ fontSize: 11, color: t.muted }}>
+                  {groupPosts.length} {groupPosts.length === 1 ? 'entry' : 'entries'} {collapsedGroups[groupKey] ? '▸' : '▾'}
+                </span>
+              </button>
+              {!collapsedGroups[groupKey] && groupPosts.map(post => renderPost(post))}
             </div>
-
-            {/* Content — blurred in privacy mode */}
-            <div style={{ filter: blurred ? 'blur(12px)' : 'none', userSelect: blurred ? 'none' : 'auto', transition: 'filter 0.2s', pointerEvents: blurred ? 'none' : 'auto' }}>
-
-              {post.type === 'Thought' && <>
-                <p style={{ fontSize: 17, lineHeight: 1.75, color: t.thoughtText, marginBottom: post.spotifyId ? 16 : 0 }}>"{post.thought}"</p>
-                {post.spotifyId && (
-                  <iframe src={`https://open.spotify.com/embed/track/${post.spotifyId}?utm_source=generator&theme=${dark ? 0 : 1}`}
-                    width="100%" height="80" frameBorder="0"
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    loading="lazy" style={{ borderRadius: 10, marginTop: 4 }} />
-                )}
-                {post.replies?.length > 0 && (
-                  <div style={{ marginTop: 20, paddingLeft: 16, borderLeft: `2px solid ${t.border}` }}>
-                    {post.replies.map((r, i) => (
-                      <div key={i} style={{ marginBottom: 14 }}>
-                        <p style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>{formatReplyDate(r.createdAt)}</p>
-                        <p style={{ fontSize: 15, lineHeight: 1.75, color: t.thoughtText }}>"{r.text}"</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {replyingTo === post.id ? (
-                  <div style={{ marginTop: 16, paddingLeft: 16, borderLeft: `2px solid ${t.ink}` }}>
-                    <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Revisit this thought..." autoFocus rows={3}
-                      style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block' }} />
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <button onClick={() => { setReplyingTo(null); setReplyText('') }} style={{ fontSize: 12, padding: '6px 14px', background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.muted }}>Cancel</button>
-                      <button onClick={() => handleReply(post.id)} disabled={replySaving} style={{ fontSize: 12, padding: '6px 14px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20 }}>{replySaving ? '...' : 'Add'}</button>
-                    </div>
-                  </div>
-                ) : (
-                  <button onClick={() => { setReplyingTo(post.id); setReplyText('') }} style={{ marginTop: 14, fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>↩ revisit</button>
-                )}
-              </>}
-
-              {post.type === 'Photo' && <>
-                {post.imageUrl && <img src={post.imageUrl} alt={post.caption} style={{ width: '100%', objectFit: 'contain', borderRadius: 10, marginBottom: 12, display: 'block' }} />}
-                {post.caption && <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText }}>{post.caption}</p>}
-              </>}
-
-              {post.type === 'Grateful' && (
-                <p style={{ fontSize: 16, lineHeight: 1.8, color: t.bodyText, whiteSpace: 'pre-wrap' }}>{post.grateful}</p>
-              )}
-
-              {post.type === 'Day' && <>
-                <p style={{ fontFamily: "'Lora', serif", fontSize: 18, fontWeight: 500, color: t.ink, marginBottom: 16 }}>{formatDayLabel(post.dayKey)}</p>
-                <div style={{ marginBottom: 20 }}>
-                  <p style={{ fontSize: 11, color: t.muted, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 10 }}>To-do</p>
-                  {post.todos?.map((todo, i) => (
-                    <div key={i} onClick={() => toggleTodo(post.id, i)} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, cursor: 'pointer' }}>
-                      <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: `1.5px solid ${todo.done ? t.green : t.border}`, background: todo.done ? t.green : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {todo.done && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 6 5 9 10 3"/></svg>}
-                      </div>
-                      <span style={{ fontSize: 15, color: todo.done ? t.muted : t.ink, textDecoration: todo.done ? 'line-through' : 'none', lineHeight: 1.5 }}>{todo.text}</span>
-                    </div>
-                  ))}
-                  {addingTodoTo === post.id ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                      <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${t.border}`, flexShrink: 0 }} />
-                      <input value={newTodoText} onChange={e => setNewTodoText(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && addTodoToPost(post.id)}
-                        placeholder="New task..." autoFocus
-                        style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, background: 'transparent', color: t.ink, borderBottom: `1px solid ${t.border}`, paddingBottom: 4 }} />
-                      <button onClick={() => addTodoToPost(post.id)} style={{ fontSize: 12, padding: '4px 12px', background: t.ink, color: t.bg, border: 'none', borderRadius: 12 }}>Add</button>
-                      <button onClick={() => { setAddingTodoTo(null); setNewTodoText('') }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setAddingTodoTo(post.id)} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 6 }}>+ add task</button>
-                  )}
-                </div>
-                <div style={{ paddingTop: 16, borderTop: `1px solid ${t.border}` }}>
-                  <p style={{ fontSize: 11, color: t.muted, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 10 }}>What I actually did</p>
-                  {editingDay === post.id ? (
-                    <>
-                      <textarea value={actuallyDid} onChange={e => setActuallyDid(e.target.value)} placeholder="What did you actually end up doing..." autoFocus rows={4}
-                        style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, lineHeight: 1.7, resize: 'none', background: 'transparent', color: t.ink, display: 'block', borderBottom: `1px solid ${t.border}` }} />
-                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                        <button onClick={() => { setEditingDay(null); setActuallyDid('') }} style={{ fontSize: 12, padding: '6px 14px', background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.muted }}>Cancel</button>
-                        <button onClick={() => saveActuallyDid(post.id)} style={{ fontSize: 12, padding: '6px 14px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20 }}>Save</button>
-                      </div>
-                    </>
-                  ) : post.actuallyDid ? (
-                    <>
-                      <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{post.actuallyDid}</p>
-                      <button onClick={() => { setEditingDay(post.id); setActuallyDid(post.actuallyDid) }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✏ edit</button>
-                    </>
-                  ) : (
-                    <button onClick={() => { setEditingDay(post.id); setActuallyDid('') }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>↩ revisit — what did you actually do?</button>
-                  )}
-                </div>
-              </>}
-
-            </div>{/* end blur wrapper */}
-          </div>
-        ))}
+          ))
+        ) : (
+          filtered.map(post => renderPost(post))
+        )}
       </main>
 
       {/* Mobile bottom bar */}
