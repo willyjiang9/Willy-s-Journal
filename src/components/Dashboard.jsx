@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { signOut } from 'firebase/auth'
 import {
-  collection, addDoc, getDocs, deleteDoc, doc,
-  orderBy, query, serverTimestamp, updateDoc, arrayUnion
+  collection, addDoc, getDocs, deleteDoc, doc, getDoc,
+  orderBy, query, serverTimestamp, updateDoc, arrayUnion, setDoc
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { auth, db, storage } from '../firebase'
+import Onboarding from './Onboarding'
 
 const TABS = ['All', 'Thought', 'Photo', 'Grateful', 'Day', 'Prompt']
 
@@ -162,6 +163,7 @@ export default function Dashboard({ user }) {
   const [addingTodoTo, setAddingTodoTo] = useState(null)
   const [newTodoText, setNewTodoText] = useState('')
   const [blurred, setBlurred] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const fileRef = useRef()
 
   const t = {
@@ -183,7 +185,17 @@ export default function Dashboard({ user }) {
     localStorage.setItem('theme', dark ? 'dark' : 'light')
   }, [dark])
 
-  useEffect(() => { fetchPosts() }, [])
+  useEffect(() => {
+    fetchPosts()
+    checkOnboarding()
+  }, [])
+
+  async function checkOnboarding() {
+    try {
+      const metaDoc = await getDoc(doc(db, 'users', uid, 'meta', 'onboarding'))
+      if (!metaDoc.exists()) setShowOnboarding(true)
+    } catch (e) { console.error(e) }
+  }
 
   function toggleDark() { setDark(d => !d) }
 
@@ -477,6 +489,10 @@ export default function Dashboard({ user }) {
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 20px 120px', color: t.ink, background: t.bg, minHeight: '100vh' }}>
+
+      {showOnboarding && (
+        <Onboarding userId={uid} onDone={() => setShowOnboarding(false)} />
+      )}
 
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 0 20px', borderBottom: `1px solid ${t.border}`, flexWrap: 'wrap', gap: 10 }}>
         <span style={{ fontFamily: "'Lora', serif", fontSize: 24, letterSpacing: '-0.3px', color: t.ink }}>Folio</span>
