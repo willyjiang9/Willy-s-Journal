@@ -1,3 +1,4 @@
+import useIsInstalled from '../hooks/useIsInstalled'
 import { useState, useEffect, useRef } from 'react'
 import { signOut } from 'firebase/auth'
 import {
@@ -164,6 +165,10 @@ export default function Dashboard({ user }) {
   const [newTodoText, setNewTodoText] = useState('')
   const [blurred, setBlurred] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showInstallBanner, setShowInstallBanner] = useState(() => {
+    return localStorage.getItem('installBannerDismissed') !== 'true'
+  })
+  const { installed, mobile } = useIsInstalled()
   const fileRef = useRef()
 
   const t = {
@@ -490,6 +495,21 @@ export default function Dashboard({ user }) {
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 20px 120px', color: t.ink, background: t.bg, minHeight: '100vh' }}>
 
       {showOnboarding && (
+        {mobile && !installed && showInstallBanner && (
+          <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 10, padding: '12px 16px', margin: '20px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <p style={{ fontSize: 13, color: t.ink, fontWeight: 500, marginBottom: 4 }}>📱 Add Folio to your home screen</p>
+              <p style={{ fontSize: 12, color: t.muted, lineHeight: 1.6 }}>
+                iPhone: Share → <em>Add to Home Screen</em><br />
+                Android: Menu (⋮) → <em>Add to Home Screen</em>
+              </p>
+            </div>
+            <button onClick={() => {
+              setShowInstallBanner(false)
+              localStorage.setItem('installBannerDismissed', 'true')
+            }} style={{ background: 'none', border: 'none', color: t.muted, fontSize: 18, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>✕</button>
+          </div>
+        )}
         <Onboarding userId={uid} onDone={() => setShowOnboarding(false)} />
       )}
 
