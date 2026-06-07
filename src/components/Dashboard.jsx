@@ -112,13 +112,8 @@ function getPostDate(post) {
   return post.createdAt.toDate ? post.createdAt.toDate() : new Date(post.createdAt)
 }
 
-function getDayKey(date) {
-  return date.toISOString().slice(0, 10)
-}
-
-function getMonthKey(date) {
-  return date.toISOString().slice(0, 7)
-}
+function getDayKey(date) { return date.toISOString().slice(0, 10) }
+function getMonthKey(date) { return date.toISOString().slice(0, 7) }
 
 function formatMonthLabel(key) {
   const [year, month] = key.split('-')
@@ -136,10 +131,14 @@ function formatDayGroupLabel(key) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
-export default function Dashboard() {
+export default function Dashboard({ user }) {
+  const uid = user.uid
+  const postsCol = () => collection(db, 'users', uid, 'posts')
+  const postDoc = (id) => doc(db, 'users', uid, 'posts', id)
+
   const [posts, setPosts] = useState([])
   const [filter, setFilter] = useState('All')
-  const [groupBy, setGroupBy] = useState('none') // 'none' | 'day' | 'month'
+  const [groupBy, setGroupBy] = useState('none')
   const [collapsedGroups, setCollapsedGroups] = useState({})
   const [composing, setComposing] = useState(false)
   const [postType, setPostType] = useState('Thought')
@@ -201,7 +200,7 @@ export default function Dashboard() {
   async function fetchPosts() {
     setLoading(true)
     try {
-      const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'))
+      const q = query(postsCol(), orderBy('createdAt', 'desc'))
       const snap = await getDocs(q)
       setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     } catch (e) { console.error(e) }
@@ -215,7 +214,7 @@ export default function Dashboard() {
       if (postType === 'Photo') {
         let imageUrl = null
         if (imageFile) {
-          const storageRef = ref(storage, `photos/${Date.now()}_${imageFile.name}`)
+          const storageRef = ref(storage, `users/${uid}/photos/${Date.now()}_${imageFile.name}`)
           await uploadBytes(storageRef, imageFile)
           imageUrl = await getDownloadURL(storageRef)
         }
@@ -237,7 +236,7 @@ export default function Dashboard() {
         if (!promptAnswer.trim()) { setSaving(false); return }
         data = { ...data, prompt: getDailyPrompt(promptOffset), answer: promptAnswer }
       }
-      const docRef = await addDoc(collection(db, 'posts'), data)
+      const docRef = await addDoc(postsCol(), data)
       setPosts(prev => [{ id: docRef.id, ...data, createdAt: { toDate: () => new Date() } }, ...prev])
       resetCompose()
     } catch (e) { console.error(e); alert('Failed to save.') }
@@ -248,7 +247,7 @@ export default function Dashboard() {
     const post = posts.find(p => p.id === postId)
     if (!post) return
     const updatedTodos = post.todos.map((todo, i) => i === index ? { ...todo, done: !todo.done } : todo)
-    await updateDoc(doc(db, 'posts', postId), { todos: updatedTodos })
+    await updateDoc(postDoc(postId), { todos: updatedTodos })
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, todos: updatedTodos } : p))
   }
 
@@ -257,14 +256,14 @@ export default function Dashboard() {
     const post = posts.find(p => p.id === postId)
     if (!post) return
     const updatedTodos = [...post.todos, { text: newTodoText.trim(), done: false }]
-    await updateDoc(doc(db, 'posts', postId), { todos: updatedTodos })
+    await updateDoc(postDoc(postId), { todos: updatedTodos })
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, todos: updatedTodos } : p))
     setNewTodoText(''); setAddingTodoTo(null)
   }
 
   async function saveActuallyDid(postId) {
     const trimmed = actuallyDid.trim()
-    await updateDoc(doc(db, 'posts', postId), { actuallyDid: trimmed })
+    await updateDoc(postDoc(postId), { actuallyDid: trimmed })
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, actuallyDid: trimmed } : p))
     setEditingDay(null); setActuallyDid('')
   }
@@ -274,7 +273,7 @@ export default function Dashboard() {
     setReplySaving(true)
     const reply = { text: replyText.trim(), createdAt: new Date().toISOString() }
     try {
-      await updateDoc(doc(db, 'posts', postId), { replies: arrayUnion(reply) })
+      await updateDoc(postDoc(postId), { replies: arrayUnion(reply) })
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, replies: [...(p.replies || []), reply] } : p))
       setReplyText(''); setReplyingTo(null)
     } catch (e) { console.error(e) }
@@ -283,7 +282,7 @@ export default function Dashboard() {
 
   async function handleDelete(id) {
     if (!confirm('Delete this post?')) return
-    await deleteDoc(doc(db, 'posts', id))
+    await deleteDoc(postDoc(id))
     setPosts(prev => prev.filter(p => p.id !== id))
   }
 
@@ -315,9 +314,16 @@ export default function Dashboard() {
       ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   }
 
+  function extractSpotifyId(input) {
+    if (!input) return null
+    const match = input.match(/track\/([a-zA-Z0-9]+)/)
+    if (match) return match[1]
+    if (/^[a-zA-Z0-9]{22}$/.test(input.trim())) return input.trim()
+    return null
+  }
+
   const filtered = posts.filter(p => filter === 'All' || p.type === filter)
 
-  // Group posts
   function getGroupedPosts() {
     if (groupBy === 'none') return null
     const groups = {}
@@ -331,14 +337,6 @@ export default function Dashboard() {
   }
 
   const grouped = getGroupedPosts()
-
-  function extractSpotifyId(input) {
-    if (!input) return null
-    const match = input.match(/track\/([a-zA-Z0-9]+)/)
-    if (match) return match[1]
-    if (/^[a-zA-Z0-9]{22}$/.test(input.trim())) return input.trim()
-    return null
-  }
 
   const DotToggle = () => (
     <button onClick={toggleDark} title="Toggle dark mode" style={{
@@ -369,7 +367,6 @@ export default function Dashboard() {
   function renderPost(post) {
     return (
       <div key={post.id} style={{ padding: '28px 0', borderBottom: `1px solid ${t.border}` }}>
-        {/* Meta */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: t.muted, letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: 10, flexWrap: 'wrap' }}>
           <span>{formatDate(post.createdAt)}</span>
           <span style={{ opacity: 0.4, margin: '0 2px' }}>·</span>
@@ -377,7 +374,6 @@ export default function Dashboard() {
           <button onClick={() => handleDelete(post.id)} style={{ marginLeft: 'auto', fontSize: 11, background: 'none', border: 'none', color: t.border, cursor: 'pointer', padding: '2px 6px' }}>Delete</button>
         </div>
 
-        {/* Content */}
         <div style={{ filter: blurred ? 'blur(12px)' : 'none', userSelect: blurred ? 'none' : 'auto', transition: 'filter 0.2s', pointerEvents: blurred ? 'none' : 'auto' }}>
 
           {post.type === 'Thought' && <>
@@ -482,23 +478,20 @@ export default function Dashboard() {
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 20px 120px', color: t.ink, background: t.bg, minHeight: '100vh' }}>
 
-      {/* Header */}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 0 20px', borderBottom: `1px solid ${t.border}`, flexWrap: 'wrap', gap: 10 }}>
-        <span style={{ fontFamily: "'Lora', serif", fontSize: 24, letterSpacing: '-0.3px', color: t.ink }}>Willy's space</span>
+        <span style={{ fontFamily: "'Lora', serif", fontSize: 24, letterSpacing: '-0.3px', color: t.ink }}>Folio</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="header-filters" style={{ display: 'flex', gap: 4 }}>
             {TABS.map(tab => <button key={tab} onClick={() => setFilter(tab)} style={tabBtn(tab)}>{tab}</button>)}
           </div>
-          {/* Group by */}
           <div style={{ display: 'flex', border: `1px solid ${t.border}`, borderRadius: 8, overflow: 'hidden' }}>
             {[['none', '—'], ['day', 'D'], ['month', 'M']].map(([val, label]) => (
-              <button key={val} onClick={() => setGroupBy(val)} title={val === 'none' ? 'No grouping' : `Group by ${val}`} style={{
+              <button key={val} onClick={() => setGroupBy(val)} style={{
                 fontSize: 12, padding: '6px 10px', background: groupBy === val ? t.ink : 'none',
                 border: 'none', color: groupBy === val ? t.bg : t.muted, cursor: 'pointer'
               }}>{label}</button>
             ))}
           </div>
-          {/* Blur toggle */}
           <button onClick={() => setBlurred(b => !b)} title="Privacy mode" style={{
             width: 32, height: 32, borderRadius: 8,
             border: `1px solid ${blurred ? t.ink : t.border}`,
@@ -523,7 +516,6 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Compose */}
       {composing && (
         <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, margin: '24px 0' }}>
           <div style={{ padding: 20 }}>
@@ -600,7 +592,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Feed */}
       <main style={{ marginTop: 36 }}>
         {loading && <p style={{ color: t.muted, fontSize: 14, textAlign: 'center', padding: '60px 0' }}>Loading...</p>}
         {!loading && filtered.length === 0 && (
@@ -609,16 +600,11 @@ export default function Dashboard() {
             <p style={{ fontSize: 13, marginTop: 6 }}>Hit + New to write your first post.</p>
           </div>
         )}
-
         {grouped ? (
           grouped.map(([groupKey, groupPosts]) => (
             <div key={groupKey} style={{ marginBottom: 8 }}>
-              <button onClick={() => toggleGroup(groupKey)} style={{
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '14px 0', background: 'none', border: 'none', cursor: 'pointer',
-                borderBottom: `1px solid ${t.border}`
-              }}>
-                <span style={{ fontSize: 13, fontWeight: 500, color: t.ink, letterSpacing: '0.2px' }}>
+              <button onClick={() => toggleGroup(groupKey)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', background: 'none', border: 'none', cursor: 'pointer', borderBottom: `1px solid ${t.border}` }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: t.ink }}>
                   {groupBy === 'day' ? formatDayGroupLabel(groupKey) : formatMonthLabel(groupKey)}
                 </span>
                 <span style={{ fontSize: 11, color: t.muted }}>
@@ -633,7 +619,6 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Mobile bottom bar */}
       <div className="mobile-bottom-bar" style={{ display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0, background: t.surface, borderTop: `1px solid ${t.border}`, padding: '10px 16px 24px', gap: 6, zIndex: 100, justifyContent: 'center', flexWrap: 'wrap' }}>
         {TABS.map(tab => (
           <button key={tab} onClick={() => setFilter(tab)} style={{ fontSize: 13, padding: '7px 16px', background: filter === tab ? t.ink : t.surface2, border: `1px solid ${t.border}`, borderRadius: 20, color: filter === tab ? t.bg : t.muted }}>{tab}</button>
