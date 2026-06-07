@@ -54,9 +54,9 @@ const STEPS = [
   {
     label: "Look back",
     preview: {
-      meta: "June 1, 2026 · Thought",
-      content: "tired and its late. i think this is done for now. probably my fav project so far.",
-      revisit: "May 15 · You wrote: 'Still not sure about this.' Look how far you've come.",
+      meta: "3 months ago · Thought",
+      content: "I don't think I'm ready for any of this. Feels like everyone else has it figured out.",
+      revisit: "You wrote this 3 months ago. Look how much has changed since then.",
     }
   },
 ]
@@ -93,7 +93,7 @@ export default function Landing({ onSignup, onLogin }) {
 
       {/* Nav */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 48px', borderBottom: '1px solid #e8e6e0', position: 'sticky', top: 0, background: '#faf9f7', zIndex: 100 }}>
-        <span style={{ fontFamily: "'Lora', serif", fontSize: 22, letterSpacing: '-0.3px' }}>Folio</span>
+        <span style={{ fontFamily: "'Lora', serif", fontSize: 32, letterSpacing: '-0.5px' }}>Folio</span>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button onClick={onLogin} style={{ fontSize: 14, background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Sign in</button>
           <button onClick={onSignup} style={{ fontSize: 14, background: '#1a1a18', color: '#faf9f7', border: 'none', borderRadius: 20, padding: '8px 20px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Try for free</button>
@@ -102,9 +102,6 @@ export default function Landing({ onSignup, onLogin }) {
 
       {/* Hero */}
       <section style={{ maxWidth: 760, margin: '0 auto', padding: '100px 24px 80px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-block', fontSize: 11, letterSpacing: '2px', textTransform: 'uppercase', color: '#888', border: '1px solid #e8e6e0', borderRadius: 20, padding: '5px 14px', marginBottom: 32 }}>
-          Free during pilot
-        </div>
         <h1 style={{ fontFamily: "'Lora', serif", fontSize: 'clamp(36px, 6vw, 64px)', lineHeight: 1.15, letterSpacing: '-1px', marginBottom: 24, fontWeight: 400 }}>
           Write freely.<br />Live intentionally.
         </h1>
@@ -252,8 +249,7 @@ export default function Landing({ onSignup, onLogin }) {
 
       {/* Pricing */}
       <section style={{ maxWidth: 480, margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
-        <p style={{ fontSize: 11, letterSpacing: '2px', textTransform: 'uppercase', color: '#aaa', marginBottom: 16 }}>Pricing</p>
-        <h2 style={{ fontFamily: "'Lora', serif", fontSize: 'clamp(24px, 4vw, 38px)', fontWeight: 400, marginBottom: 48, letterSpacing: '-0.5px' }}>Free, for now.</h2>
+        <p style={{ fontSize: 11, letterSpacing: '2px', textTransform: 'uppercase', color: '#aaa', marginBottom: 48 }}>Pricing</p>
         <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: 20, padding: '40px 36px', textAlign: 'left' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
             <div>
@@ -267,10 +263,6 @@ export default function Landing({ onSignup, onLogin }) {
               'All post types — thoughts, prompts, gratitude, day, photos',
               'Daily rotating reflection prompts',
               'Up to 5 photo uploads per day',
-              'Day & month grouping',
-              'Privacy blur mode',
-              'Dark mode',
-              'Mobile app (add to home screen)',
             ].map((item, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                 <svg width="16" height="16" viewBox="0 0 12 12" fill="none" stroke="#2d5a3d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><polyline points="2 6 5 9 10 3"/></svg>
