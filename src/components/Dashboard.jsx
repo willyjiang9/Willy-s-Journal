@@ -477,7 +477,7 @@ export default function Dashboard({ user }) {
                 </>
               ) : post.actuallyDid ? (
                 <>
-                  <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{post.actuallyDid}</p>
+                   <p style={{ fontSize: 15, lineHeight: 1.75, color: t.bodyText, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{post.actuallyDid}</p>
                   <button onClick={() => { setEditingDay(post.id); setActuallyDid(post.actuallyDid) }} style={{ fontSize: 12, color: t.muted, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✏ edit</button>
                 </>
               ) : (
@@ -494,25 +494,25 @@ export default function Dashboard({ user }) {
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 20px 120px', color: t.ink, background: t.bg, minHeight: '100vh' }}>
 
-      {showOnboarding && (
-        {mobile && !installed && showInstallBanner && (
-          <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 10, padding: '12px 16px', margin: '20px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-            <div>
-              <p style={{ fontSize: 13, color: t.ink, fontWeight: 500, marginBottom: 4 }}>📱 Add Folio to your home screen</p>
-              <p style={{ fontSize: 12, color: t.muted, lineHeight: 1.6 }}>
-                iPhone: Share → <em>Add to Home Screen</em><br />
-                Android: Menu (⋮) → <em>Add to Home Screen</em>
-              </p>
-            </div>
-            <button onClick={() => {
-              setShowInstallBanner(false)
-              localStorage.setItem('installBannerDismissed', 'true')
-            }} style={{ background: 'none', border: 'none', color: t.muted, fontSize: 18, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>✕</button>
-          </div>
-        )}
-        <Onboarding userId={uid} onDone={() => setShowOnboarding(false)} />
-      )}
+{showOnboarding && (
+  <Onboarding userId={uid} onDone={() => setShowOnboarding(false)} />
+)}
 
+{mobile && !installed && showInstallBanner && (
+  <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 10, padding: '12px 16px', margin: '20px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+    <div>
+      <p style={{ fontSize: 13, color: t.ink, fontWeight: 500, marginBottom: 4 }}>📱 Add Folio to your home screen</p>
+      <p style={{ fontSize: 12, color: t.muted, lineHeight: 1.6 }}>
+        iPhone: Share → <em>Add to Home Screen</em><br />
+        Android: Menu (⋮) → <em>Add to Home Screen</em>
+      </p>
+    </div>
+    <button onClick={() => {
+      setShowInstallBanner(false)
+      localStorage.setItem('installBannerDismissed', 'true')
+    }} style={{ background: 'none', border: 'none', color: t.muted, fontSize: 18, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>✕</button>
+  </div>
+)}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 0 20px', borderBottom: `1px solid ${t.border}`, flexWrap: 'wrap', gap: 10 }}>
         <span style={{ fontFamily: "'Lora', serif", fontSize: 24, letterSpacing: '-0.3px', color: t.ink }}>Folio</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
