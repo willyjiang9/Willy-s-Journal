@@ -197,6 +197,7 @@ export default function Dashboard({ user }) {
   }, [])
 
   async function checkOnboarding() {
+    console.log('checkOnboarding called, uid:', uid)
     try {
       const metaDoc = await getDoc(doc(db, 'users', uid, 'meta', 'onboarding'))
       if (!metaDoc.exists()) setShowOnboarding(true)
