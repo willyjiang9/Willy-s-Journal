@@ -386,8 +386,7 @@ export default function Dashboard({ user }) {
           <button onClick={() => handleDelete(post.id)} style={{ marginLeft: 'auto', fontSize: 11, background: 'none', border: 'none', color: t.border, cursor: 'pointer', padding: '2px 6px' }}>Delete</button>
         </div>
 
-        <div style={{ filter: blurred ? 'blur(12px)' : 'none', userSelect: blurred ? 'none' : 'auto', transition: 'filter 0.2s', pointerEvents: blurred ? 'none' : 'auto' }}>
-
+        <div style={{ filter: blurred ? 'blur(8px)' : 'none', userSelect: blurred ? 'none' : 'auto', transition: 'filter 0.3s ease', pointerEvents: blurred ? 'none' : 'auto', opacity: blurred ? 0.6 : 1 }}>
           {post.type === 'Thought' && <>
             <p style={{ fontSize: 17, lineHeight: 1.75, color: t.thoughtText, marginBottom: post.spotifyId ? 16 : 0 }}>"{post.thought}"</p>
             {post.spotifyId && (
@@ -500,8 +499,7 @@ export default function Dashboard({ user }) {
           <div className="header-filters" style={{ display: 'flex', gap: 4 }}>
             {TABS.map(tab => <button key={tab} onClick={() => setFilter(tab)} style={tabBtn(tab)}>{tab}</button>)}
           </div>
-          <div style={{ display: 'flex', border: `1px solid ${t.border}`, borderRadius: 8, overflow: 'hidden' }}>
-            {[['none', '—'], ['day', 'D'], ['month', 'M']].map(([val, label]) => (
+          <div style={{ display: 'flex', border: `1px solid ${t.border}`, borderRadius: 8 }}>            {[['none', '—'], ['day', 'D'], ['month', 'M']].map(([val, label]) => (
               <button key={val} onClick={() => setGroupBy(val)} style={{
                 fontSize: 12, padding: '6px 10px', background: groupBy === val ? t.ink : 'none',
                 border: 'none', color: groupBy === val ? t.bg : t.muted, cursor: 'pointer'
