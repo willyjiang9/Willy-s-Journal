@@ -5,11 +5,14 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth'
-import { auth } from '../firebase'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { auth, db } from '../firebase'
 
 const provider = new GoogleAuthProvider()
 
 export default function Auth({ mode, onBack }) {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -21,7 +24,12 @@ export default function Auth({ mode, onBack }) {
     setLoading(true); setError('')
     try {
       if (isSignup) {
-        await createUserWithEmailAndPassword(auth, email, password)
+        if (!firstName.trim()) { setError('Please enter your first name.'); setLoading(false); return }
+        const cred = await createUserWithEmailAndPassword(auth, email, password)
+        await setDoc(doc(db, 'users', cred.user.uid, 'meta', 'profile'), {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+        })
       } else {
         await signInWithEmailAndPassword(auth, email, password)
       }
@@ -42,7 +50,17 @@ export default function Auth({ mode, onBack }) {
   async function handleGoogle() {
     setLoading(true); setError('')
     try {
-      await signInWithPopup(auth, provider)
+      const cred = await signInWithPopup(auth, provider)
+      // For Google, check if profile already exists
+      const profileDoc = await getDoc(doc(db, 'users', cred.user.uid, 'meta', 'profile'))
+      if (!profileDoc.exists()) {
+        const displayName = cred.user.displayName || ''
+        const parts = displayName.split(' ')
+        await setDoc(doc(db, 'users', cred.user.uid, 'meta', 'profile'), {
+          firstName: parts[0] || '',
+          lastName: parts.slice(1).join(' ') || '',
+        })
+      }
     } catch (err) {
       setError('Google sign-in failed. Try again.')
     }
@@ -78,6 +96,14 @@ export default function Auth({ mode, onBack }) {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {isSignup && (
+            <div style={{ display: 'flex', gap: 10 }}>
+              <input type="text" placeholder="First name" value={firstName} onChange={e => setFirstName(e.target.value)} required
+                style={{ flex: 1, padding: '12px 14px', border: '1px solid #e8e6e0', borderRadius: 10, fontSize: 15, background: '#fff', color: '#1a1a18', outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
+              <input type="text" placeholder="Last (optional)" value={lastName} onChange={e => setLastName(e.target.value)}
+                style={{ flex: 1, padding: '12px 14px', border: '1px solid #e8e6e0', borderRadius: 10, fontSize: 15, background: '#fff', color: '#1a1a18', outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
+            </div>
+          )}
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required
             style={{ padding: '12px 14px', border: '1px solid #e8e6e0', borderRadius: 10, fontSize: 15, background: '#fff', color: '#1a1a18', outline: 'none', fontFamily: "'DM Sans', sans-serif" }} />
           <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required
