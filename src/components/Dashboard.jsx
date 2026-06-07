@@ -164,6 +164,7 @@ export default function Dashboard({ user }) {
   const [addingTodoTo, setAddingTodoTo] = useState(null)
   const [newTodoText, setNewTodoText] = useState('')
   const [blurred, setBlurred] = useState(false)
+  const [firstName, setFirstName] = useState('')
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showInstallBanner, setShowInstallBanner] = useState(() => {
     return localStorage.getItem('installBannerDismissed') !== 'true'
@@ -199,7 +200,11 @@ export default function Dashboard({ user }) {
     try {
       const metaDoc = await getDoc(doc(db, 'users', uid, 'meta', 'onboarding'))
       if (!metaDoc.exists()) setShowOnboarding(true)
-    } catch (e) { console.error(e) }
+      const profileDoc = await getDoc(doc(db, 'users', uid, 'meta', 'profile'))
+      console.log('profile exists:', profileDoc.exists())
+      console.log('profile data:', profileDoc.data())
+      if (profileDoc.exists()) setFirstName(profileDoc.data().firstName || '')
+    } catch (e) { console.error('checkOnboarding error:', e) }
   }
 
   function toggleDark() { setDark(d => !d) }
@@ -514,7 +519,9 @@ export default function Dashboard({ user }) {
   </div>
 )}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 0 20px', borderBottom: `1px solid ${t.border}`, flexWrap: 'wrap', gap: 10 }}>
-        <span style={{ fontFamily: "'Lora', serif", fontSize: 24, letterSpacing: '-0.3px', color: t.ink }}>Folio</span>
+      <span style={{ fontFamily: "'Lora', serif", fontSize: 24, letterSpacing: '-0.3px', color: t.ink }}>
+        {firstName ? `${firstName}'s Folio` : 'Folio'}
+      </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="header-filters" style={{ display: 'flex', gap: 4 }}>
             {TABS.map(tab => <button key={tab} onClick={() => setFilter(tab)} style={tabBtn(tab)}>{tab}</button>)}
