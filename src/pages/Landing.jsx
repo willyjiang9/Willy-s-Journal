@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import useIsInstalled from '../hooks/useIsInstalled'
 
 const MOMENTS = [
   "For when you need to get something out of your head.",
@@ -66,6 +67,8 @@ export default function Landing({ onSignup, onLogin }) {
   const [momentVisible, setMomentVisible] = useState(true)
   const [step, setStep] = useState(0)
   const [stepVisible, setStepVisible] = useState(true)
+  const [showInstallTip, setShowInstallTip] = useState(false)
+  const { installed, mobile } = useIsInstalled()
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -129,6 +132,30 @@ export default function Landing({ onSignup, onLogin }) {
             Sign in
           </button>
         </div>
+
+        {/* Install tip */}
+        {mobile && !installed && (
+          <div style={{ marginTop: 32 }}>
+            <button onClick={() => setShowInstallTip(s => !s)} style={{
+              fontSize: 13, color: '#aaa', background: 'none', border: 'none',
+              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              display: 'flex', alignItems: 'center', gap: 6, margin: '0 auto'
+            }}>
+              📱 Add to your home screen
+              <span style={{ fontSize: 11 }}>{showInstallTip ? '▲' : '▼'}</span>
+            </button>
+            {showInstallTip && (
+              <div style={{ marginTop: 12, background: '#fff', border: '1px solid #e8e6e0', borderRadius: 12, padding: '16px 20px', textAlign: 'left', maxWidth: 320, margin: '12px auto 0' }}>
+                <p style={{ fontSize: 13, color: '#444', lineHeight: 1.7 }}>
+                  <strong>iPhone:</strong> Tap the Share button in Safari → <em>Add to Home Screen</em>
+                </p>
+                <p style={{ fontSize: 13, color: '#444', lineHeight: 1.7, marginTop: 8 }}>
+                  <strong>Android:</strong> Tap the menu (⋮) in Chrome → <em>Add to Home Screen</em>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <div style={{ maxWidth: 680, margin: '0 auto', height: 1, background: '#e8e6e0' }} />
