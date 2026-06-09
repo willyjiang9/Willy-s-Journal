@@ -51,7 +51,6 @@ export default function Auth({ mode, onBack }) {
     setLoading(true); setError('')
     try {
       const cred = await signInWithPopup(auth, provider)
-      // For Google, check if profile already exists
       const profileDoc = await getDoc(doc(db, 'users', cred.user.uid, 'meta', 'profile'))
       if (!profileDoc.exists()) {
         const displayName = cred.user.displayName || ''
@@ -75,7 +74,7 @@ export default function Auth({ mode, onBack }) {
 
       <div style={{ width: '100%', maxWidth: 360 }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <span style={{ fontFamily: "'Lora', serif", fontSize: 24 }}>Folio</span>
+          <span style={{ fontFamily: "'Lora', serif", fontSize: 24 }}>Memoiv</span>
           <p style={{ fontSize: 14, color: '#888', marginTop: 8 }}>{isSignup ? 'Create your private space' : 'Welcome back'}</p>
         </div>
 

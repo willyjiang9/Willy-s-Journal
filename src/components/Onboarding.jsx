@@ -6,7 +6,7 @@ const STEPS = [
   {
     emoji: '🔒',
     title: 'Your private space',
-    desc: 'Everything you write in Folio is completely private. No followers, no likes, no judgment. Just you.',
+    desc: 'Everything you write in Memoiv is completely private. No followers, no likes, no judgment. Just you.',
   },
   {
     emoji: '✦',
@@ -21,7 +21,7 @@ const STEPS = [
   {
     emoji: '↩',
     title: 'Come back to it',
-    desc: "You can revisit old thoughts, add to your day, and look back on how far you've come. Folio grows with you.",
+    desc: "You can revisit old thoughts, add to your day, and look back on how far you've come. Memoiv grows with you.",
   },
 ]
 
