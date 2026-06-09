@@ -507,7 +507,7 @@ export default function Dashboard({ user }) {
 {mobile && !installed && showInstallBanner && (
   <div style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 10, padding: '12px 16px', margin: '20px 0 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
     <div>
-      <p style={{ fontSize: 13, color: t.ink, fontWeight: 500, marginBottom: 4 }}>📱 Add Folio to your home screen</p>
+      <p style={{ fontSize: 13, color: t.ink, fontWeight: 500, marginBottom: 4 }}>📱 Add memoiv to your home screen</p>
       <p style={{ fontSize: 12, color: t.muted, lineHeight: 1.6 }}>
         iPhone: Share → <em>Add to Home Screen</em><br />
         Android: Menu (⋮) → <em>Add to Home Screen</em>
@@ -521,7 +521,7 @@ export default function Dashboard({ user }) {
 )}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 0 20px', borderBottom: `1px solid ${t.border}`, flexWrap: 'wrap', gap: 10 }}>
       <span style={{ fontFamily: "'Lora', serif", fontSize: 24, letterSpacing: '-0.3px', color: t.ink }}>
-        {firstName ? `${firstName}'s Folio` : 'Folio'}
+        {firstName ? `${firstName}'s memoiv` : 'memoiv'}
       </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="header-filters" style={{ display: 'flex', gap: 4 }}>

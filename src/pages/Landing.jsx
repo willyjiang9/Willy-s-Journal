@@ -96,7 +96,7 @@ export default function Landing({ onSignup, onLogin }) {
 
       {/* Nav */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 48px', borderBottom: '1px solid #e8e6e0', position: 'sticky', top: 0, background: '#faf9f7', zIndex: 100 }}>
-        <span style={{ fontFamily: "'Lora', serif", fontSize: 32, letterSpacing: '-0.5px' }}>Folio</span>
+        <span style={{ fontFamily: "'Lora', serif", fontSize: 32, letterSpacing: '-0.5px' }}>memoiv</span>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button onClick={onLogin} style={{ fontSize: 14, background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Sign in</button>
           <button onClick={onSignup} style={{ fontSize: 14, background: '#1a1a18', color: '#faf9f7', border: 'none', borderRadius: 20, padding: '8px 20px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Try for free</button>
@@ -110,7 +110,7 @@ export default function Landing({ onSignup, onLogin }) {
         </h1>
         <p style={{ fontSize: 18, color: '#555', lineHeight: 1.7, marginBottom: 16, maxWidth: 520, margin: '0 auto 16px' }}>
           Social media took away your private space.<br />
-          <strong style={{ color: '#1a1a18' }}>Folio gives it back.</strong>
+          <strong style={{ color: '#1a1a18' }}>memoiv gives it back.</strong>
         </p>
 
         <div style={{ height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 48, marginTop: 32 }}>
@@ -215,7 +215,7 @@ export default function Landing({ onSignup, onLogin }) {
                 transition: 'opacity 0.2s ease, transform 0.2s ease',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid #e8e6e0' }}>
-                  <span style={{ fontFamily: "'Lora', serif", fontSize: 14 }}>Folio</span>
+                  <span style={{ fontFamily: "'Lora', serif", fontSize: 14 }}>memoiv</span>
                   <span style={{ fontSize: 10, background: '#1a1a18', color: '#fff', borderRadius: 10, padding: '3px 8px' }}>+ New</span>
                 </div>
 
@@ -307,7 +307,7 @@ export default function Landing({ onSignup, onLogin }) {
 
       {/* Footer */}
       <footer style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-        <span style={{ fontFamily: "'Lora', serif", fontSize: 18 }}>Folio</span>
+        <span style={{ fontFamily: "'Lora', serif", fontSize: 18 }}>memoiv</span>
         <div style={{ display: 'flex', gap: 20 }}>
           {['About', 'Privacy', 'Contact'].map(link => (
             <a key={link} href="#" style={{ fontSize: 13, color: '#aaa', textDecoration: 'none' }}>{link}</a>
