@@ -519,7 +519,7 @@ export default function Dashboard({ user }) {
     }} style={{ background: 'none', border: 'none', color: t.muted, fontSize: 18, cursor: 'pointer', flexShrink: 0, lineHeight: 1 }}>✕</button>
   </div>
 )}
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 0 20px', borderBottom: `1px solid ${t.border}`, flexWrap: 'wrap', gap: 10 }}>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0 14px', borderBottom: `1px solid ${t.border}`, flexWrap: 'wrap', gap: 8 }}>
       <span style={{ fontFamily: "'Lora', serif", fontSize: 24, letterSpacing: '-0.3px', color: t.ink }}>
         {firstName ? `${firstName}'s memoiv` : 'memoiv'}
       </span>
@@ -561,7 +561,7 @@ export default function Dashboard({ user }) {
       {composing && (
         <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, margin: '24px 0' }}>
           <div style={{ padding: 20 }}>
-            <div style={{ display: 'flex', marginBottom: 18, border: `1px solid ${t.border}`, borderRadius: 8, overflow: 'hidden', width: 'fit-content' }}>
+            <div style={{ display: 'flex', marginBottom: 18, border: `1px solid ${t.border}`, borderRadius: 8, overflow: 'auto', width: '100%' }}>
               {['Thought', 'Photo', 'Grateful', 'Day', 'Prompt'].map(tab => (
                 <button key={tab} onClick={() => setPostType(tab)} style={typeBtn(tab)}>{tab}</button>
               ))}
