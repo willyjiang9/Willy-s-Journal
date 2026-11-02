@@ -309,8 +309,8 @@ export default function Landing({ onSignup, onLogin }) {
       <footer style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <span style={{ fontFamily: "'Lora', serif", fontSize: 18 }}>memoiv</span>
         <div style={{ display: 'flex', gap: 20 }}>
-          {['About', 'Privacy', 'Contact'].map(link => (
-            <a key={link} href="#" style={{ fontSize: 13, color: '#aaa', textDecoration: 'none' }}>{link}</a>
+          {[['Privacy', '/privacy'], ['Terms', '/terms'], ['Contact', 'mailto:willyj915@gmail.com']].map(([label, href]) => (
+            <a key={label} href={href} style={{ fontSize: 13, color: '#aaa', textDecoration: 'none' }}>{label}</a>
           ))}
         </div>
         <p style={{ fontSize: 12, color: '#ccc', width: '100%', textAlign: 'center', marginTop: 8 }}>Built with intention.</p>

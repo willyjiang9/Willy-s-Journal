@@ -8,6 +8,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { auth, db, storage } from '../firebase'
 import Onboarding from './Onboarding'
+import Settings from './Settings'
 
 const TABS = ['All', 'Thought', 'Photo', 'Grateful', 'Day', 'Prompt']
 
@@ -166,6 +167,7 @@ export default function Dashboard({ user }) {
   const [blurred, setBlurred] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [showInstallBanner, setShowInstallBanner] = useState(() => {
     return localStorage.getItem('installBannerDismissed') !== 'true'
   })
@@ -197,13 +199,10 @@ export default function Dashboard({ user }) {
   }, [])
 
   async function checkOnboarding() {
-    console.log('checkOnboarding called, uid:', uid)
     try {
       const metaDoc = await getDoc(doc(db, 'users', uid, 'meta', 'onboarding'))
       if (!metaDoc.exists()) setShowOnboarding(true)
       const profileDoc = await getDoc(doc(db, 'users', uid, 'meta', 'profile'))
-      console.log('profile exists:', profileDoc.exists())
-      console.log('profile data:', profileDoc.data())
       if (profileDoc.exists()) setFirstName(profileDoc.data().firstName || '')
     } catch (e) { console.error('checkOnboarding error:', e) }
   }
@@ -235,6 +234,10 @@ export default function Dashboard({ user }) {
     try {
       let data = { type: postType, createdAt: serverTimestamp() }
       if (postType === 'Photo') {
+        const todayStr = new Date().toDateString()
+        const photosToday = posts.filter(p => p.type === 'Photo' && p.imageUrl && p.createdAt?.toDate && p.createdAt.toDate().toDateString() === todayStr).length
+        if (imageFile && photosToday >= 5) { alert('You can upload up to 5 photos per day. Try again tomorrow.'); setSaving(false); return }
+        if (imageFile && imageFile.size > 5 * 1024 * 1024) { alert('Photos must be under 5 MB.'); setSaving(false); return }
         let imageUrl = null
         if (imageFile) {
           const storageRef = ref(storage, `users/${uid}/photos/${Date.now()}_${imageFile.name}`)
@@ -500,6 +503,7 @@ export default function Dashboard({ user }) {
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 20px 120px', color: t.ink, background: t.bg, minHeight: '100vh' }}>
 
+{showSettings && <Settings user={user} onClose={() => setShowSettings(false)} />}
 {showOnboarding && (
   <Onboarding userId={uid} onDone={() => setShowOnboarding(false)} />
 )}
@@ -550,6 +554,7 @@ export default function Dashboard({ user }) {
           </button>
           <DotToggle />
           <button onClick={handleNewPost} style={{ fontSize: 14, padding: '8px 18px', background: t.ink, color: t.bg, border: 'none', borderRadius: 20, fontWeight: 500 }}>+ New</button>
+          <button onClick={() => setShowSettings(true)} title="Settings" style={{ background: 'none', border: `1px solid ${t.border}`, borderRadius: 8, padding: '7px 9px', color: t.muted, fontSize: 12 }}>Settings</button>
           <button onClick={() => signOut(auth)} title="Log out" style={{ background: 'none', border: `1px solid ${t.border}`, borderRadius: 8, padding: '7px 9px', color: t.muted, display: 'flex', alignItems: 'center' }}>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>

@@ -6,7 +6,7 @@ const STEPS = [
   {
     emoji: '🔒',
     title: 'Your private space',
-    desc: 'Everything you write in Memoiv is completely private. No followers, no likes, no judgment. Just you.',
+    desc: 'Only you can see your entries. They\'re never shared with other users. No followers, no likes, no judgment. Just you.',
   },
   {
     emoji: '✦',
