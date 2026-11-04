@@ -274,37 +274,6 @@ export default function Landing({ onSignup, onLogin }) {
 
       <div style={{ maxWidth: 680, margin: '0 auto', height: 1, background: '#e8e6e0' }} />
 
-      {/* Pricing */}
-      <section style={{ maxWidth: 480, margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
-        <p style={{ fontSize: 11, letterSpacing: '2px', textTransform: 'uppercase', color: '#aaa', marginBottom: 48 }}>Pricing</p>
-        <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: 20, padding: '40px 36px', textAlign: 'left' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-            <div>
-              <p style={{ fontFamily: "'Lora', serif", fontSize: 22 }}>Pilot</p>
-              <p style={{ fontSize: 28, fontWeight: 500, marginTop: 4 }}>$0<span style={{ fontSize: 14, color: '#888', fontWeight: 400 }}>/mo</span></p>
-            </div>
-            <div style={{ fontSize: 11, background: '#f4f2ef', color: '#888', padding: '5px 12px', borderRadius: 20, letterSpacing: '0.5px' }}>FREE DURING PILOT</div>
-          </div>
-          <div style={{ borderTop: '1px solid #e8e6e0', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              'All post types — thoughts, prompts, gratitude, day, photos',
-              'Daily rotating reflection prompts',
-              'Up to 5 photo uploads per day',
-            ].map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <svg width="16" height="16" viewBox="0 0 12 12" fill="none" stroke="#2d5a3d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><polyline points="2 6 5 9 10 3"/></svg>
-                <span style={{ fontSize: 14, color: '#444', lineHeight: 1.5 }}>{item}</span>
-              </div>
-            ))}
-          </div>
-          <button onClick={onSignup} style={{ marginTop: 28, width: '100%', padding: '14px', background: '#1a1a18', color: '#faf9f7', border: 'none', borderRadius: 12, fontSize: 15, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
-            Get started free
-          </button>
-        </div>
-      </section>
-
-      <div style={{ maxWidth: 680, margin: '0 auto', height: 1, background: '#e8e6e0' }} />
-
       {/* Footer */}
       <footer style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <span style={{ fontFamily: "'Lora', serif", fontSize: 18 }}>memoiv</span>
